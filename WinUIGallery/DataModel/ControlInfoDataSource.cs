@@ -15,6 +15,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using WinUIGallery.Common;
+using WinUIGallery.Data;
+using WinUIGallery.DesktopWap.DataModel;
 using WASDK = Microsoft.WindowsAppSDK;
 
 // The data model defined by this file serves as a representative example of a strongly-typed
@@ -25,16 +27,21 @@ using WASDK = Microsoft.WindowsAppSDK;
 // responsiveness by initiating the data loading task in the code behind for App.xaml when the app
 // is first launched.
 
+namespace JsonDataModel
+{
+    [JsonSerializable(typeof(Root))]
+    [JsonSerializable(typeof(List<IconData>))]
+    [JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
+    internal sealed partial class SourceGenerationContext : JsonSerializerContext
+    {
+    }
+}
+
 namespace WinUIGallery.Data
 {
     public class Root
     {
         public ObservableCollection<ControlInfoDataGroup> Groups { get; set; }
-    }
-    [JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
-    [JsonSerializable(typeof(Root))]
-    internal partial class RootContext : JsonSerializerContext
-    {
     }
 
     /// <summary>
@@ -183,7 +190,7 @@ namespace WinUIGallery.Data
             }
 
             var jsonText = await FileLoader.LoadText("DataModel/ControlInfoData.json");
-            var controlInfoDataGroup = JsonSerializer.Deserialize(jsonText, typeof(Root), RootContext.Default) as Root;
+            var controlInfoDataGroup = JsonSerializer.Deserialize(jsonText, JsonDataModel.SourceGenerationContext.Default.Root);
 
             lock (_lock)
             {

@@ -16,11 +16,14 @@ using System.Reflection;
 using Windows.Globalization;
 using Windows.UI.Popups;
 using WinUIGallery.Common;
+using System.Diagnostics.CodeAnalysis;
 
 namespace WinUIGallery.ControlPages
 {
     public sealed partial class CalendarViewPage : Page
     {
+        // ICustomProperty provider is not AOT safe yet, so declaring here that we make use of public properties with reflection.
+        [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties, typeof(WinUIGallery.Common.LanguageList.Language))]
         public CalendarViewPage()
         {
             this.InitializeComponent();

@@ -27,16 +27,22 @@
         <Optimized>true</Optimized>
         <Optimized Condition="'$(Configuration)' == 'Debug-Unpackaged' Or '$(Configuration)' == 'Debug'">false</Optimized>
         <!-- In .NET 8, serialization is prohibited by default - we can safely use it since we're not dealing with UDTs. -->
-        <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+        <!-- <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault> -->
         <SingleProject>true</SingleProject>
         <SingleProject Condition="'$(SolutionName)' == 'WinUIGallery.DesktopWap'">false</SingleProject>
         <WindowsAppSdkIncludeVersionInfo>true</WindowsAppSdkIncludeVersionInfo>
         <PublishProfile>win-$(Platform).pubxml</PublishProfile>
-        <PublishSingleFile Condition="'$(PublishSingleFile)' == '' and '$(Packaged)' != 'true'">true</PublishSingleFile>
+        <!-- Note: PublishAot does not support x86. -->
+        <PublishAot Condition="'$(PublishAot)' == '' and '$(Optimized)' == 'true' and ('$(Platform)' == 'x64' or '$(Platform)' == 'arm64')">true</PublishAot>
+        <IsAotCompatible>true</IsAotCompatible>
+        <IsTrimmable>true</IsTrimmable>    
+        <!-- Note: PublishAot and PublishSingleFile cannot be specified at the same time. -->
+        <PublishSingleFile Condition="'$(PublishSingleFile)' == '' and '$(Packaged)' != 'true' and '$(PublishAot)' != 'true'">true</PublishSingleFile>
         <WindowsAppSdkSelfContained Condition="'$(WindowsAppSdkSelfContained)' == '' and '$(PublishSingleFile)' == 'true'">true</WindowsAppSdkSelfContained>
         <!-- Enable ExplicitlyIncludeVersionInfo workaround by setting WindowsAppSdkSelfContained earlier than the mock package would -->
         <WindowsAppSdkSelfContained Condition="'$(IsInWinUIRepo)' == 'true' and '$(WindowsAppSdkSelfContained)'==''">true</WindowsAppSdkSelfContained>
-        <ApplicationIcon>Assets\Tiles\GalleryIcon.ico</ApplicationIcon>
+        <IlcGenerateMstatFile>true</IlcGenerateMstatFile>
+        <IlcGenerateDgmlFile>true</IlcGenerateDgmlFile>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Packaged)' != 'true' and '$(SingleProject)'=='true'">
@@ -83,30 +89,6 @@
         <!-- False until https://task.ms/31482969 is implemented -->
         <AppxBundle>Never</AppxBundle>
     </PropertyGroup>
-
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Unpackaged|x86'" />
-
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Unpackaged|x64'" />
-
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Unpackaged|ARM64'" />
-
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Unpackaged|x86'" />
-
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Unpackaged|x64'" />
-
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Unpackaged|ARM64'" />
-
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'" />
-
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
-
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'" />
-
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'" />
-
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
-
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" />
 
     <Import Project="Common.props" />
 
@@ -166,19 +148,10 @@
     </ItemGroup>
 
     <ItemGroup>
-        <None Remove="Assets\Design\Cards.dark.png" />
-        <None Remove="Assets\Design\Cards.light.png" />
-        <None Remove="Assets\Design\Dialog.dark.png" />
-        <None Remove="Assets\Design\Dialog.light.png" />
-        <None Remove="Assets\Geometry.dark.png" />
-        <None Remove="Assets\Geometry.light.png" />
         <None Remove="Assets\Tiles\GalleryIcon.ico" />
-        <None Remove="ControlPagesSampleCode\Geometry\GeometrySample_xaml.txt" />
         <None Remove="ControlPagesSampleCode\Icons\FontIconSample2_xaml.txt" />
         <None Remove="ControlPagesSampleCode\Typography\TypographySample_xaml.txt" />
-        <None Remove="ControlPages\AppWindowPage.xaml" />
-        <None Remove="ControlPages\DesignGuidance\ColorPage.xaml" />
-        <None Remove="ControlPages\DesignGuidance\SpacingPage.xaml" />
+        <None Remove="ControlPages\DesignGuidance\ColorsPage.xaml" />
         <None Remove="ControlPages\InfoBadgePage.xaml" />
         <None Remove="ControlPages\LinePage.xaml" />
         <None Remove="ControlPages\SelectorBarPage.xaml" />
@@ -196,19 +169,10 @@
         <None Remove="Controls\SampleThemeListener.xaml" />
         <None Remove="DataModel\IconsData.json" />
         <None Remove="SamplePages\SampleBuiltInSystemBackdropsWindow.xaml" />
-        <None Remove="SamplePages\SampleCompactOverlayPresenterWindow.xaml" />
-        <None Remove="SamplePages\SampleFullScreenPresenterWindow.xaml" />
-        <None Remove="SamplePages\SampleOverlappedPresenterWindow.xaml" />
     </ItemGroup>
 
     <ItemGroup>
-        <Content Include="Assets\Design\Cards.dark.png" />
-        <Content Include="Assets\Design\Cards.light.png" />
-        <Content Include="Assets\Design\Dialog.dark.png" />
-        <Content Include="Assets\Design\Dialog.light.png" />
         <Content Include="Assets\GalleryHeaderImage.png" />
-        <Content Include="Assets\Design\Geometry.dark.png" />
-        <Content Include="Assets\Design\Geometry.light.png" />
         <Content Include="Assets\HomeHeaderTiles\Header-Store.dark.png" />
         <Content Include="Assets\HomeHeaderTiles\Header-Store.light.png" />
         <Content Include="Assets\HomeHeaderTiles\Header-Toolkit.png" />
@@ -221,9 +185,8 @@
         <Content Include="Assets\Tiles\SmallTile-sdk.altform-lightunplated_targetsize-32.png" />
         <Content Include="Assets\Tiles\SmallTile-sdk.altform-lightunplated_targetsize-48.png" />
         <Content Include="Assets\Tiles\TitlebarLogo.png" />
-        <Content Include="Assets\Design\Typography.dark.png" />
-        <Content Include="Assets\Design\Typography.light.png" />
-        <Content Include="ControlPagesSampleCode\Geometry\GeometrySample_xaml.txt" />
+        <Content Include="Assets\Typography.dark.png" />
+        <Content Include="Assets\Typography.light.png" />
         <Content Include="ControlPagesSampleCode\Icons\FontIconSample2_xaml.txt" />
         <Content Include="DataModel\IconsData.json" />
         <Content Include="DataModel\ControlInfoData.json" />
@@ -232,10 +195,6 @@
         <Content Include="ControlPagesSampleCode\Typography\TypographySample_xaml.txt" />
     </ItemGroup>
     <ItemGroup>
-        <Page Update="ControlPages\DesignGuidance\SpacingPage.xaml">
-          <XamlRuntime>$(DefaultXamlRuntime)</XamlRuntime>
-          <SubType>Designer</SubType>
-        </Page>
         <Page Update="Controls\CopyButton\CopyButton.xaml">
             <Generator>MSBuild:Compile</Generator>
         </Page>
@@ -303,7 +262,7 @@
         </Page>
     </ItemGroup>
     <ItemGroup>
-        <Page Update="ControlPages\DesignGuidance\ColorPage.xaml">
+        <Page Update="ControlPages\DesignGuidance\ColorsPage.xaml">
             <Generator>MSBuild:Compile</Generator>
         </Page>
     </ItemGroup>
@@ -320,26 +279,6 @@
     </ItemGroup>
     <ItemGroup>
       <Folder Include="ControlPages\Accessibility\" />
-    </ItemGroup>
-    <ItemGroup>
-      <Page Update="SamplePages\SampleFullScreenPresenterWindow.xaml">
-        <Generator>MSBuild:Compile</Generator>
-      </Page>
-    </ItemGroup>
-    <ItemGroup>
-      <Page Update="SamplePages\SampleCompactOverlayPresenterWindow.xaml">
-        <Generator>MSBuild:Compile</Generator>
-      </Page>
-    </ItemGroup>
-    <ItemGroup>
-      <Page Update="SamplePages\SampleOverlappedPresenterWindow.xaml">
-        <Generator>MSBuild:Compile</Generator>
-      </Page>
-    </ItemGroup>
-    <ItemGroup>
-      <Page Update="ControlPages\AppWindowPage.xaml">
-        <Generator>MSBuild:Compile</Generator>
-      </Page>
     </ItemGroup>
     <Import Project="ContentIncludes.props" />
     <!--Per comment in Microsoft.Common.CurrentVersion.targets, the default GetCopyToPublishDirectoryItems 
@@ -360,10 +299,5 @@
                 <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
             </_NoneWithTargetPath>
         </ItemGroup>
-    </Target>
-    <!-- Needed in order for running unpackaged to work properly. -->
-    <Target Name="CopyContentToOutputDirectory" AfterTargets="Build">
-      <Copy SourceFiles="@(Content)" DestinationFiles="@(Content->'$(OutDir)%(Identity)')" SkipUnchangedFiles="true" Condition="!$([System.IO.Path]::IsPathRooted('%(Content.Identity)'))" />
-      <Copy SourceFiles="@(Content)" DestinationFiles="@(Content->'$(OutDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="$([System.IO.Path]::IsPathRooted('%(Content.Identity)'))" />
-    </Target>
+    </Target> 
 </Project>

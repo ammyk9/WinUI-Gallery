@@ -360,9 +360,6 @@ namespace WinUIGallery.ControlPages
         }
         private void OnEnableAnimationsChanged(object sender, RoutedEventArgs e)
         {
-#if WINUI_PRERELEASE
-            VariedImageSizeRepeater.Animator = EnableAnimations.IsChecked.GetValueOrDefault() ? new DefaultElementAnimator() : null;
-#endif
         }
 
         public void FilterRecipes_FilterChanged(object sender, RoutedEventArgs e)
@@ -442,7 +439,7 @@ namespace WinUIGallery.ControlPages
     }
 
 
-    public class MyDataTemplateSelector : DataTemplateSelector
+    public partial class MyDataTemplateSelector : DataTemplateSelector
     {
         public DataTemplate Normal { get; set; }
         public DataTemplate Accent { get; set; }
@@ -460,7 +457,7 @@ namespace WinUIGallery.ControlPages
         }
     }
 
-    public class StringOrIntTemplateSelector : DataTemplateSelector
+    public partial class StringOrIntTemplateSelector : DataTemplateSelector
     {
         // Define the (currently empty) data templates to return
         // These will be "filled-in" in the XAML code.
@@ -552,7 +549,7 @@ namespace WinUIGallery.ControlPages
     }
 
     // Custom data source class that assigns elements unique IDs, making filtering easier
-    public class MyItemsSource : IList, Microsoft.UI.Xaml.Controls.IKeyIndexMapping, INotifyCollectionChanged
+    public partial class MyItemsSource : IList, Microsoft.UI.Xaml.Controls.IKeyIndexMapping, INotifyCollectionChanged
     {
         private List<Recipe> inner = new List<Recipe>();
 

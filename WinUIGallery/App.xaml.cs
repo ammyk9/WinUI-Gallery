@@ -21,12 +21,6 @@ using Microsoft.Windows.AppLifecycle;
 using Windows.ApplicationModel.Activation;
 using WinUIGallery.DesktopWap.DataModel;
 using WASDK = Microsoft.WindowsAppSDK;
-using System.Text;
-using Windows.System;
-using System.Runtime.InteropServices;
-using Microsoft.Windows.AppNotifications;
-using Microsoft.Windows.AppNotifications.Builder;
-using static WinUIGallery.Win32;
 
 namespace WinUIGallery
 {
@@ -37,9 +31,6 @@ namespace WinUIGallery
     {
         private static Window startupWindow;
         private static Win32WindowHelper win32WindowHelper;
-        private static int registeredKeyPressedHook = 0;
-        private HookProc keyEventHook;
-
 
         public static string WinAppSdkDetails
         {
@@ -52,19 +43,12 @@ namespace WinUIGallery
         {
             get
             {
-                try
-                {
-                    // Retrieve Windows App Runtime version info dynamically
-                    var windowsAppRuntimeVersion =
-                        from module in Process.GetCurrentProcess().Modules.OfType<ProcessModule>()
-                        where module.FileName.EndsWith("Microsoft.WindowsAppRuntime.Insights.Resource.dll")
-                        select FileVersionInfo.GetVersionInfo(module.FileName);
-                    return WinAppSdkDetails + ", Windows App Runtime " + windowsAppRuntimeVersion.First().FileVersion;
-                }
-                catch
-                {
-                    return WinAppSdkDetails + $", Windows App Runtime {WASDK.Runtime.Version.Major}.{WASDK.Runtime.Version.Minor}";
-                }
+                // Retrieve Windows App Runtime version info dynamically
+                var windowsAppRuntimeVersion =
+                    from module in Process.GetCurrentProcess().Modules.OfType<ProcessModule>()
+                    where module.FileName.EndsWith("Microsoft.WindowsAppRuntime.Insights.Resource.dll")
+                    select FileVersionInfo.GetVersionInfo(module.FileName);
+                return WinAppSdkDetails + ", Windows App Runtime " + windowsAppRuntimeVersion.First().FileVersion; 
             }
         }
 
@@ -86,13 +70,6 @@ namespace WinUIGallery
         public App()
         {
             this.InitializeComponent();
-            this.UnhandledException += HandleExceptions;
-
-#if WINUI_PRERELEASE
-            this.Suspending += OnSuspending;
-            this.Resuming += App_Resuming;
-            this.RequiresPointerMode = ApplicationRequiresPointerMode.WhenRequested;
-#endif
         }
 
         public void EnableSound(bool withSpatial = false)
@@ -136,33 +113,13 @@ namespace WinUIGallery
             }
 #endif
 
-            keyEventHook = new HookProc(KeyEventHook);
-            registeredKeyPressedHook = SetWindowKeyHook(keyEventHook);
-
             EnsureWindow();
-        }
-
-        private int KeyEventHook(int nCode, IntPtr wParam, IntPtr lParam)
-        {
-            if (nCode >= 0 && IsKeyDownHook(lParam))
-            {
-                RootFrameNavigationHelper.RaiseKeyPressed((uint)wParam);
-            }
-
-            return CallNextHookEx(registeredKeyPressedHook, nCode, wParam, lParam);
         }
 
         private void DebugSettings_BindingFailed(object sender, BindingFailedEventArgs e)
         {
 
         }
-
-#if WINUI_PRERELEASE
-        protected override void OnActivated(IActivatedEventArgs args)
-        {
-            EnsureWindow(args);
-        }
-#endif
 
         private async void EnsureWindow(IActivatedEventArgs args = null)
         {
@@ -272,43 +229,5 @@ namespace WinUIGallery
         {
             throw new Exception("Failed to load Page " + e.SourcePageType.FullName);
         }
-
-        /// <summary>
-        /// Prevents the app from crashing when a exception gets thrown and notifies the user.
-        /// </summary>
-        /// <param name="sender">The app as an object.</param>
-        /// <param name="e">Details about the exception.</param>
-        private void HandleExceptions(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
-        {
-            e.Handled = true; //Don't crash the app.
-
-            //Create the notification.
-            var notification = new AppNotificationBuilder()
-                .AddText("An exception was thrown.")
-                .AddText($"Type: {e.Exception.GetType()}")
-                .AddText($"Message: {e.Message}\r\n" +
-                         $"HResult: {e.Exception.HResult}")
-                .BuildNotification();
-
-            //Show the notification
-            AppNotificationManager.Default.Show(notification);
-        }
-
-
-#if WINUI_PRERELEASE
-        /// <summary>
-        /// Invoked when application execution is being suspended.  Application state is saved
-        /// without knowing whether the application will be terminated or resumed with the contents
-        /// of memory still intact.
-        /// </summary>
-        /// <param name="sender">The source of the suspend request.</param>
-        /// <param name="e">Details about the suspend request.</param>
-        private async void OnSuspending(object sender, SuspendingEventArgs e)
-        {
-            var deferral = e.SuspendingOperation.GetDeferral();
-            await SuspensionManager.SaveAsync();
-            deferral.Complete();
-        }
-#endif // WINUI_PRERELEASE
     }
 }
