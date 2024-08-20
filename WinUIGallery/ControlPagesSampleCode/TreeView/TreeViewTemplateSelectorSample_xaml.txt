@@ -13,18 +13,18 @@
     <DataTemplate x:Key="FileTemplate" x:DataType="controlpages:ExplorerItem">
         <TreeViewItem AutomationProperties.Name="{x:Bind Name}">
             <StackPanel Orientation="Horizontal">
-                <FontIcon Glyph="&#xE8A5;" />
+                <Image Width="20" Source="../Assets/file.png"/>
                 <TextBlock Margin="0,0,10,0"/>
                 <TextBlock Text="{x:Bind Name}"/>
             </StackPanel>
         </TreeViewItem>
     </DataTemplate>
 
-    <controlpages:ExplorerItemTemplateSelector x:Key="ExplorerItemTemplateSelector"
+    <local:ExplorerItemTemplateSelector x:Key="ExpolrerItemTemplateSelector"
         FolderTemplate="{StaticResource FolderTemplate}"
         FileTemplate="{StaticResource FileTemplate}" />
 </Page.Resources>
 
 <TreeView ItemsSource="{x:Bind DataSource}" 
-                   ItemTemplateSelector="{StaticResource ExplorerItemTemplateSelector}" />
+                   ItemTemplateSelector="{StaticResource ExpolrerItemTemplateSelector}" />
 

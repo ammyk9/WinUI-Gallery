@@ -14,7 +14,9 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
 
-namespace WinUIGallery.ControlPages
+// The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=234238
+
+namespace AppUIBasics.ControlPages
 {
     public class NamedEasingFunction
     {
@@ -27,6 +29,9 @@ namespace WinUIGallery.ControlPages
         }
     }
 
+    /// <summary>
+    /// An empty page that can be used on its own or navigated to within a Frame.
+    /// </summary>
     public sealed partial class EasingFunctionPage : Page
     {
         private List<NamedEasingFunction> EasingFunctions { get; } = new List<NamedEasingFunction>()

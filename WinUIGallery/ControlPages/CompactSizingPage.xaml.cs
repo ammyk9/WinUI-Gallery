@@ -1,9 +1,9 @@
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Animation;
-using WinUIGallery.SamplePages;
+using AppUIBasics.SamplePages;
 
-namespace WinUIGallery.ControlPages
+namespace AppUIBasics.ControlPages
 {
     public sealed partial class CompactSizingPage : Page
     {
@@ -20,28 +20,12 @@ namespace WinUIGallery.ControlPages
 
         private void Standard_Checked(object sender, RoutedEventArgs e)
         {
-            var oldPage = ContentFrame.Content as SampleCompactSizingPage;
-
             ContentFrame.Navigate(typeof(SampleStandardSizingPage), null, new SuppressNavigationTransitionInfo());
-
-            if (oldPage != null)
-            {
-                var page = ContentFrame.Content as SampleStandardSizingPage;
-                page.CopyState(oldPage);
-            }
         }
 
         private void Compact_Checked(object sender, RoutedEventArgs e)
         {
-            var oldPage = ContentFrame.Content as SampleStandardSizingPage;
-
             ContentFrame.Navigate(typeof(SampleCompactSizingPage), null, new SuppressNavigationTransitionInfo());
-
-            if (oldPage != null)
-            {
-                var page = ContentFrame.Content as SampleCompactSizingPage;
-                page.CopyState(oldPage);
-            }
         }
     }
 }

@@ -1,4 +1,4 @@
-//*********************************************************
+﻿//*********************************************************
 //
 // Copyright (c) Microsoft. All rights reserved.
 // THIS CODE IS PROVIDED *AS IS* WITHOUT WARRANTY OF
@@ -7,20 +7,18 @@
 // PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
 //
 //*********************************************************
-using WinUIGallery.Common;
-using WinUIGallery.Data;
-using WinUIGallery.Helper;
+using AppUIBasics.Common;
+using AppUIBasics.Data;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
+using Microsoft.UI.Xaml.Data;
 
-
-namespace WinUIGallery
+namespace AppUIBasics
 {
     /// <summary>
     /// This page displays search results when a global search is directed to this application.
@@ -28,7 +26,7 @@ namespace WinUIGallery
     public sealed partial class SearchResultsPage : ItemsPageBase
     {
         private IEnumerable<Filter> _filters;
-        private Filter _selectedFilter;
+        private int? _pivotIndex;
         string _queryText;
 
         public IEnumerable<Filter> Filters
@@ -46,30 +44,28 @@ namespace WinUIGallery
         {
             base.OnNavigatedTo(e);
 
-            NavigationRootPageArgs args = (NavigationRootPageArgs)e.Parameter;
-            var queryText = args.Parameter?.ToString().ToLower();
+            var queryText = e.Parameter?.ToString().ToLower();
 
             BuildFilterList(queryText);
+
+            NavigationRootPage.Current.NavigationView.Header = "Search";
         }
 
         protected override void OnNavigatingFrom(NavigatingCancelEventArgs e)
         {
             base.OnNavigatingFrom(e);
 
-            _selectedFilter = (Filter)resultsNavView.SelectedItem;
+            _pivotIndex = resultsPivot.SelectedIndex != -1 ? resultsPivot.SelectedIndex : default(int?);
         }
 
-        private void OnResultsNavViewLoaded(object sender, RoutedEventArgs e)
+        private void OnResultsPivotLoaded(object sender, RoutedEventArgs e)
         {
-            resultsNavView.Focus(FocusState.Programmatic);
-        }
-
-        private void OnResultsNavViewSelectionChanged(object sender, NavigationViewSelectionChangedEventArgs e)
-        {
-            if (e.SelectedItem != null)
+            if (NavigationRootPage.Current.DeviceFamily == DeviceType.Xbox)
             {
-                _selectedFilter = (Filter)e.SelectedItem;
+                resultsPivot.IsHeaderItemsCarouselEnabled = false;
             }
+
+            resultsPivot.Focus(FocusState.Programmatic);
         }
 
         private void BuildFilterList(string queryText)
@@ -87,14 +83,14 @@ namespace WinUIGallery
                     var matchingItems =
                         group.Items.Where(item =>
                         {
-                            // Idea: check for every word entered (separated by space) if it is in the name,
+                            // Idea: check for every word entered (separated by space) if it is in the name, 
                             // e.g. for query "split button" the only result should "SplitButton" since its the only query to contain "split" and "button"
                             // If any of the sub tokens is not in the string, we ignore the item. So the search gets more precise with more words
                             bool flag = true;
                             foreach (string queryToken in querySplit)
                             {
                                 // Check if token is in title or subtitle
-                                if (!item.Title.ToLower().Contains(queryToken) && item.Subtitle != null && !item.Subtitle.ToLower().Contains(queryToken))
+                                if (!item.Title.ToLower().Contains(queryToken) && !item.Subtitle.ToLower().Contains(queryToken))
                                 {
                                     // Neither title nor sub title contain one of the tokens so we discard this item!
                                     flag = false;
@@ -114,6 +110,8 @@ namespace WinUIGallery
                 {
                     // Display informational text when there are no search results.
                     VisualStateManager.GoToState(this, "NoResultsFound", false);
+                    var textbox = NavigationRootPage.Current.PageHeader?.GetDescendantsOfType<AutoSuggestBox>().FirstOrDefault();
+                    textbox?.Focus(FocusState.Programmatic);
                 }
                 else
                 {
@@ -123,16 +121,19 @@ namespace WinUIGallery
                     Filters = filterList;
 
                     // Check to see if the current query matches the last
-                    if (_queryText == queryText && _selectedFilter != null)
+                    if (_queryText == queryText)
                     {
-                        // If so try to restore any previously selected nav view item
-                        resultsNavView.SelectedItem = Filters.Where(f => f.Name == _selectedFilter.Name).SingleOrDefault();
+                        // If so try to restore any previously selected pivot item
+                        if (_pivotIndex != null)
+                        {
+                            resultsPivot.SelectedIndex = _pivotIndex.Value;
+                        }
                     }
                     else
                     {
-                        // Otherwise reset query text and nav view filter
+                        // Otherwise reset query text and pivot index
                         _queryText = queryText;
-                        resultsNavView.SelectedItem = Filters.FirstOrDefault();
+                        _pivotIndex = null;
                     }
 
                     VisualStateManager.GoToState(this, "ResultsFound", false);
@@ -149,14 +150,14 @@ namespace WinUIGallery
     /// <summary>
     /// View model describing one of the filters available for viewing search results.
     /// </summary>
-    public sealed partial class Filter : INotifyPropertyChanged
+    public sealed class Filter : INotifyPropertyChanged
     {
-        private string _name;
+        private String _name;
         private int _count;
         private bool? _active;
         private List<ControlInfoDataItem> _items;
 
-        public Filter(string name, int count, List<ControlInfoDataItem> controlInfoList, bool active = false)
+        public Filter(String name, int count, List<ControlInfoDataItem> controlInfoList, bool active = false)
         {
             this.Name = name;
             this.Count = count;
@@ -164,7 +165,7 @@ namespace WinUIGallery
             this.Items = controlInfoList;
         }
 
-        public override string ToString()
+        public override String ToString()
         {
             return Description;
         }
@@ -175,7 +176,7 @@ namespace WinUIGallery
             set { this.SetProperty(ref _items, value); }
         }
 
-        public string Name
+        public String Name
         {
             get { return _name; }
             set { if (this.SetProperty(ref _name, value)) this.NotifyPropertyChanged(nameof(Description)); }
@@ -193,9 +194,9 @@ namespace WinUIGallery
             set { this.SetProperty(ref _active, value); }
         }
 
-        public string Description
+        public String Description
         {
-            get { return string.Format("{0} ({1})", _name, _count); }
+            get { return String.Format("{0} ({1})", _name, _count); }
         }
 
         /// <summary>
@@ -215,7 +216,7 @@ namespace WinUIGallery
         /// support CallerMemberName.</param>
         /// <returns>True if the value was changed, false if the existing value matched the
         /// desired value.</returns>
-        private bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = null)
+        private bool SetProperty<T>(ref T storage, T value, [CallerMemberName] String propertyName = null)
         {
             if (object.Equals(storage, value)) return false;
 

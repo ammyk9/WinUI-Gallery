@@ -4,30 +4,27 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using NotifyCollectionChangedAction = Microsoft.UI.Xaml.Interop.NotifyCollectionChangedAction;
-
-namespace WinUIGallery
+namespace AppUIBasics
 {
     // .NET collection types are tightly coupled with WUX types - e.g., ObservableCollection<T>
     // maps to WUX.INotifyCollectionChanged, and creates WUX.NotifyCollectionChangedEventArgs
     // when raising its INCC event.  This is a problem because we've switched everything else over
     // to use MUX types, such that creating WUX types raises an RPC_E_WRONG_THREAD error
     // due to DXamlCore not being initialized.  For the purposes of our tests, we're providing
-    // our own implementation of ObservableCollection<T> that implements MUX.INotifyCollectionChanged.
-    public class ObservableCollection<T> : Collection<T>, Microsoft.UI.Xaml.Interop.INotifyCollectionChanged, INotifyPropertyChanged
+    // our own implementation of TestObservableCollection<T> that implements MUX.INotifyCollectionChanged.
+    public class TestObservableCollection<T> : Collection<T>, Microsoft.UI.Xaml.Interop.INotifyCollectionChanged, INotifyPropertyChanged
     {
         private ReentrancyGuard reentrancyGuard = null;
 
         private class ReentrancyGuard : IDisposable
         {
-            private ObservableCollection<T> owningCollection;
+            private TestObservableCollection<T> owningCollection;
 
-            public ReentrancyGuard(ObservableCollection<T> owningCollection)
+            public ReentrancyGuard(TestObservableCollection<T> owningCollection)
             {
                 owningCollection.CheckReentrancy();
                 owningCollection.reentrancyGuard = this;
@@ -40,11 +37,11 @@ namespace WinUIGallery
             }
         }
 
-        public ObservableCollection() : base() { }
-        public ObservableCollection(IList<T> list) : base(list.ToList()) { }
-        public ObservableCollection(IEnumerable<T> collection) : base(collection.ToList()) { }
+        public TestObservableCollection() : base() { }
+        public TestObservableCollection(IList<T> list) : base(list.ToList()) { }
+        public TestObservableCollection(IEnumerable<T> collection) : base(collection.ToList()) { }
 
-        public event Microsoft.UI.Xaml.Interop.NotifyCollectionChangedEventHandler CollectionChanged;
+        public event NotifyCollectionChangedEventHandler CollectionChanged;
 
         public void Move(int oldIndex, int newIndex)
         {
@@ -72,7 +69,7 @@ namespace WinUIGallery
 
             base.ClearItems();
             OnCollectionChanged(
-                NotifyCollectionChangedAction.Reset,
+                System.Collections.Specialized.NotifyCollectionChangedAction.Reset,
                 null, oldItems, 0, 0);
         }
 
@@ -85,7 +82,7 @@ namespace WinUIGallery
 
             base.InsertItem(index, item);
             OnCollectionChanged(
-                NotifyCollectionChangedAction.Add,
+                System.Collections.Specialized.NotifyCollectionChangedAction.Add,
                 newItem, null, index, 0);
         }
 
@@ -101,7 +98,7 @@ namespace WinUIGallery
             base.RemoveAt(oldIndex);
             base.InsertItem(newIndex, item);
             OnCollectionChanged(
-                NotifyCollectionChangedAction.Move,
+                System.Collections.Specialized.NotifyCollectionChangedAction.Move,
                 newItem, oldItem, newIndex, oldIndex);
         }
 
@@ -114,7 +111,7 @@ namespace WinUIGallery
 
             base.RemoveItem(index);
             OnCollectionChanged(
-                NotifyCollectionChangedAction.Remove,
+                System.Collections.Specialized.NotifyCollectionChangedAction.Remove,
                 null, oldItem, 0, index);
         }
 
@@ -129,21 +126,21 @@ namespace WinUIGallery
 
             base.SetItem(index, item);
             OnCollectionChanged(
-                NotifyCollectionChangedAction.Replace,
+                System.Collections.Specialized.NotifyCollectionChangedAction.Replace,
                 newItem, oldItem, index, index);
         }
 
         protected virtual void OnCollectionChanged(
-            NotifyCollectionChangedAction action,
+            System.Collections.Specialized.NotifyCollectionChangedAction action,
             IBindableVector newItems,
             IBindableVector oldItems,
             int newIndex,
             int oldIndex)
         {
-            OnCollectionChanged(new Microsoft.UI.Xaml.Interop.NotifyCollectionChangedEventArgs(action, newItems, oldItems, newIndex, oldIndex));
+            OnCollectionChanged(new NotifyCollectionChangedEventArgs(action, newItems, oldItems, newIndex, oldIndex));
         }
 
-        protected virtual void OnCollectionChanged(Microsoft.UI.Xaml.Interop.NotifyCollectionChangedEventArgs e)
+        protected virtual void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
         {
             using (BlockReentrancy())
             {
@@ -151,9 +148,7 @@ namespace WinUIGallery
             }
         }
 
-#pragma warning disable 0067 // PropertyChanged is never used, raising a warning, but it's needed to implement INotifyPropertyChanged.
         public event PropertyChangedEventHandler PropertyChanged;
-#pragma warning restore 0067
     }
 
     public class TestBindableVector<T> : IList<T>, IBindableVector

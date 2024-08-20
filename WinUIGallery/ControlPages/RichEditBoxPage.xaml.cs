@@ -13,23 +13,21 @@ using Windows.Foundation.Metadata;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.Storage.Provider;
-using Microsoft.UI.Text;
+using Microsoft.UI;
+using Windows.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
-using Microsoft.UI;
-using System.Runtime.InteropServices;
-using WinRT;
 
-namespace WinUIGallery.ControlPages
+namespace AppUIBasics.ControlPages
 {
     public sealed partial class RichEditBoxPage : Page
     {
-        [DllImport("user32.dll", ExactSpelling = true, CharSet = CharSet.Auto, PreserveSig = true, SetLastError = false)]
-        public static extern IntPtr GetActiveWindow();
-        private Windows.UI.Color currentColor = Microsoft.UI.Colors.Green;
-
+        private Windows.UI.Color currentColor = Colors.Black;
+        // String used to restore the colors when the focus gets reenabled
+        // See #144 for more info https://github.com/microsoft/Xaml-Controls-Gallery/issues/144
+        private string LastFormattedText = "";
         public RichEditBoxPage()
         {
             this.InitializeComponent();
@@ -38,44 +36,24 @@ namespace WinUIGallery.ControlPages
         private void Menu_Opening(object sender, object e)
         {
             CommandBarFlyout myFlyout = sender as CommandBarFlyout;
-            if (myFlyout != null && myFlyout.Target == REBCustom)
+            if (myFlyout.Target == REBCustom)
             {
-                AppBarButton myButton = new AppBarButton
-                {
-                    Command = new StandardUICommand(StandardUICommandKind.Share)
-                };
+                AppBarButton myButton = new AppBarButton();
+                myButton.Command = new StandardUICommand(StandardUICommandKind.Share);
                 myFlyout.PrimaryCommands.Add(myButton);
             }
-            else
-            {
-                CommandBarFlyout muxFlyout = sender as CommandBarFlyout;
-                if (muxFlyout != null && muxFlyout.Target == REBCustom)
-                {
-                    AppBarButton myButton = new AppBarButton
-                    {
-                        Command = new StandardUICommand(StandardUICommandKind.Share)
-                    };
-                    muxFlyout.PrimaryCommands.Add(myButton);
-                }
-            }
-
         }
 
         private async void OpenButton_Click(object sender, RoutedEventArgs e)
         {
             // Open a text file.
-            FileOpenPicker open = new FileOpenPicker();
-            open.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+            Windows.Storage.Pickers.FileOpenPicker open =
+                new Windows.Storage.Pickers.FileOpenPicker();
+            open.SuggestedStartLocation =
+                Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
             open.FileTypeFilter.Add(".rtf");
 
-            // When running on win32, FileOpenPicker needs to know the top-level hwnd via IInitializeWithWindow::Initialize.
-            if (Window.Current == null)
-            {
-                IntPtr hwnd = GetActiveWindow();
-                WinRT.Interop.InitializeWithWindow.Initialize(open, hwnd);
-            }
-
-            StorageFile file = await open.PickSingleFileAsync();
+            Windows.Storage.StorageFile file = await open.PickSingleFileAsync();
 
             if (file != null)
             {
@@ -83,17 +61,15 @@ namespace WinUIGallery.ControlPages
                     await file.OpenAsync(Windows.Storage.FileAccessMode.Read))
                 {
                     // Load the file into the Document property of the RichEditBox.
-                    editor.Document.LoadFromStream(TextSetOptions.FormatRtf, randAccStream);
+                    editor.Document.LoadFromStream(Windows.UI.Text.TextSetOptions.FormatRtf, randAccStream);
                 }
             }
         }
 
         private async void SaveButton_Click(object sender, RoutedEventArgs e)
         {
-            FileSavePicker savePicker = new FileSavePicker
-            {
-                SuggestedStartLocation = PickerLocationId.DocumentsLibrary
-            };
+            FileSavePicker savePicker = new FileSavePicker();
+            savePicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
 
             // Dropdown of file types the user can save the file as
             savePicker.FileTypeChoices.Add("Rich Text", new List<string>() { ".rtf" });
@@ -101,27 +77,20 @@ namespace WinUIGallery.ControlPages
             // Default file name if the user does not type one in or select a file to replace
             savePicker.SuggestedFileName = "New Document";
 
-            // When running on win32, FileSavePicker needs to know the top-level hwnd via IInitializeWithWindow::Initialize.
-            if (Window.Current == null)
-            {
-                IntPtr hwnd = GetActiveWindow();
-                WinRT.Interop.InitializeWithWindow.Initialize(savePicker, hwnd);
-            }
-
             StorageFile file = await savePicker.PickSaveFileAsync();
             if (file != null)
             {
-                // Prevent updates to the remote version of the file until we
+                // Prevent updates to the remote version of the file until we 
                 // finish making changes and call CompleteUpdatesAsync.
                 CachedFileManager.DeferUpdates(file);
                 // write to file
                 using (Windows.Storage.Streams.IRandomAccessStream randAccStream =
                     await file.OpenAsync(Windows.Storage.FileAccessMode.ReadWrite))
                 {
-                    editor.Document.SaveToStream(TextGetOptions.FormatRtf, randAccStream);
+                    editor.Document.SaveToStream(Windows.UI.Text.TextGetOptions.FormatRtf, randAccStream);
                 }
 
-                // Let Windows know that we're finished changing the file so the
+                // Let Windows know that we're finished changing the file so the 
                 // other app can update the remote version of the file.
                 FileUpdateStatus status = await CachedFileManager.CompleteUpdatesAsync(file);
                 if (status != FileUpdateStatus.Complete)
@@ -188,15 +157,50 @@ namespace WinUIGallery.ControlPages
 
         private void Editor_GotFocus(object sender, RoutedEventArgs e)
         {
-            editor.Document.GetText(TextGetOptions.UseCrlf, out _);
-            
             // reset colors to correct defaults for Focused state
             ITextRange documentRange = editor.Document.GetRange(0, TextConstants.MaxUnitCount);
             SolidColorBrush background = (SolidColorBrush)App.Current.Resources["TextControlBackgroundFocused"];
+            SolidColorBrush foreground = (SolidColorBrush)App.Current.Resources["TextControlForegroundFocused"];
 
-            if (background != null)
+            editor.Document.ApplyDisplayUpdates();
+
+            if (background != null && foreground != null)
             {
                 documentRange.CharacterFormat.BackgroundColor = background.Color;
+            }
+            // saving selection span
+            var caretPosition = editor.Document.Selection.GetIndex(TextRangeUnit.Character) - 1;
+            if (caretPosition <= 0)
+            {
+                // User has not entered text, prevent invalid values and just set index to 1
+                caretPosition = 1;
+            }
+            var selectionLength = editor.Document.Selection.Length;
+            // restoring text styling, unintentionally sets caret position at beginning of text
+            editor.Document.SetText(TextSetOptions.FormatRtf, LastFormattedText);
+            // restoring selection position
+            editor.Document.Selection.SetIndex(TextRangeUnit.Character, caretPosition, false);
+            editor.Document.Selection.SetRange(caretPosition, caretPosition + selectionLength);
+            // Editor might have gained focus because user changed color.
+            // Change selection color
+            // Note that only way to regain with selection containing text is using the change color button
+            editor.Document.Selection.CharacterFormat.ForegroundColor = currentColor;
+        }
+
+        private void Editor_LosingFocus(object sender, RoutedEventArgs e)
+        {
+            editor.Document.GetText(TextGetOptions.FormatRtf, out LastFormattedText);
+        }
+
+        private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (e.NewSize.Width <= 768)
+            {
+                editor.Width = e.NewSize.Width - 20;
+            }
+            else
+            {
+                editor.Width = e.NewSize.Width - 100;
             }
         }
 
@@ -223,9 +227,10 @@ namespace WinUIGallery.ControlPages
             }
         }
 
-        private void Editor_TextChanged(object sender, RoutedEventArgs e)
+        private void Editor_TextChanging(object sender, RichEditBoxTextChangingEventArgs e)
         {
-            if (editor.Document.Selection.CharacterFormat.ForegroundColor != currentColor)
+            // Fix bug where selected text would get colored when editor loses focus
+            if (FocusManager.GetFocusedElement() == editor)
             {
                 editor.Document.Selection.CharacterFormat.ForegroundColor = currentColor;
             }

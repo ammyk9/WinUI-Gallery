@@ -1,9 +1,9 @@
-﻿using Microsoft.UI.Text;
+﻿using Windows.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 
-namespace WinUIGallery.ControlPages
+namespace AppUIBasics.ControlPages
 {
     public sealed partial class ToggleSplitButtonPage : Page
     {

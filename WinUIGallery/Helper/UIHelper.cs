@@ -1,17 +1,12 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Media;
 
-namespace WinUIGallery.Helper
+namespace AppUIBasics.Common
 {
     public static class UIHelper
     {
-        static UIHelper()
-        {
-        }
-
         public static IEnumerable<T> GetDescendantsOfType<T>(this DependencyObject start) where T : DependencyObject
         {
             return start.GetDescendants().OfType<T>();
@@ -41,27 +36,6 @@ namespace WinUIGallery.Helper
                     queue.Enqueue(child);
                 }
             }
-        }
-
-        static public UIElement FindElementByName(UIElement element, string name)
-        {
-            if (element.XamlRoot != null && element.XamlRoot.Content != null)
-            {
-                var ele = (element.XamlRoot.Content as FrameworkElement).FindName(name);
-                if (ele != null)
-                {
-                    return ele as UIElement;
-                }
-            }
-            return null;
-        }
-
-        // Confirmation of Action
-        static public void AnnounceActionForAccessibility(UIElement ue, string annoucement, string activityID)
-        {
-            var peer = FrameworkElementAutomationPeer.FromElement(ue);
-            peer.RaiseNotificationEvent(AutomationNotificationKind.ActionCompleted,
-                                        AutomationNotificationProcessing.ImportantMostRecent, annoucement, activityID);
         }
     }
 }

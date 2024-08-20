@@ -1,12 +1,12 @@
-using System;
+﻿using System;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
-using WinUIGallery.ControlPages;
+using AppUIBasics.ControlPages;
 using Windows.Foundation.Metadata;
 
-namespace WinUIGallery.ConnectedAnimationPages
+namespace AppUIBasics.ConnectedAnimationPages
 {
     public sealed partial class CollectionPage : Page
     {
@@ -19,7 +19,7 @@ namespace WinUIGallery.ConnectedAnimationPages
             // Ensure that the MainPage is only created once, and cached during navigation.
             this.NavigationCacheMode = NavigationCacheMode.Enabled;
 
-            collection.ItemsSource = WinUIGallery.ControlPages.CustomDataObject.GetDataObjects();
+            collection.ItemsSource = AppUIBasics.ControlPages.CustomDataObject.GetDataObjects();
         }
 
         private async void collection_Loaded(object sender, RoutedEventArgs e)
@@ -42,16 +42,14 @@ namespace WinUIGallery.ConnectedAnimationPages
 
                     await collection.TryStartConnectedAnimationAsync(animation, _storeditem, "connectedElement");
                 }
-
-                // Set focus on the list
-                collection.Focus(FocusState.Programmatic);
             }
         }
 
         private void collection_ItemClick(object sender, ItemClickEventArgs e)
         {
             // Get the collection item corresponding to the clicked item.
-            if (collection.ContainerFromItem(e.ClickedItem) is ListViewItem container)
+            var container = collection.ContainerFromItem(e.ClickedItem) as ListViewItem;
+            if (container != null)
             {
                 // Stash the clicked item for use later. We'll need it when we connect back from the detailpage.
                 _storeditem = container.Content as CustomDataObject;
@@ -59,7 +57,8 @@ namespace WinUIGallery.ConnectedAnimationPages
                 // Prepare the connected animation.
                 // Notice that the stored item is passed in, as well as the name of the connected element. 
                 // The animation will actually start on the Detailed info page.
-                collection.PrepareConnectedAnimation("ForwardConnectedAnimation", _storeditem, "connectedElement");
+                var animation = collection.PrepareConnectedAnimation("ForwardConnectedAnimation", _storeditem, "connectedElement");
+
             }
 
             // Navigate to the DetailedInfoPage.
@@ -67,12 +66,5 @@ namespace WinUIGallery.ConnectedAnimationPages
             Frame.Navigate(typeof(DetailedInfoPage), _storeditem, new SuppressNavigationTransitionInfo());
         }
 
-        private void TextBlock_IsTextTrimmedChanged(TextBlock sender, IsTextTrimmedChangedEventArgs args)
-        {
-            var textBlock = sender as TextBlock;
-            var text = textBlock.IsTextTrimmed ? textBlock.Text : string.Empty;
-
-            ToolTipService.SetToolTip(textBlock, text);
-        }
     }
 }

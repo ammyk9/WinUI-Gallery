@@ -1,17 +1,17 @@
-using System;
+﻿using System;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Data;
 
-namespace WinUIGallery.Common
+namespace AppUIBasics.Common
 {
-    partial class DoubleToThicknessConverter : IValueConverter
+    class DoubleToThicknessConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, string language)
         {
             if (value is double?)
             {
                 var val = (double)value;
-                return new Thickness(val);
+                return ThicknessHelper.FromUniformLength(val);
             }
             return false;
         }

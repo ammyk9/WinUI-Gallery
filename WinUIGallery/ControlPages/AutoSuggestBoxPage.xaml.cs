@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -13,115 +13,19 @@ using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
-using WinUIGallery.Data;
+using AppUIBasics.Data;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml.Media.Imaging;
 
-namespace WinUIGallery.ControlPages
+// The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=234238
+
+namespace AppUIBasics.ControlPages
 {
+    /// <summary>
+    /// An empty page that can be used on its own or navigated to within a Frame.
+    /// </summary>
     public sealed partial class AutoSuggestBoxPage : Page
     {
-        private List<string> Cats = new List<string>()
-        {
-            "Abyssinian",
-            "Aegean",
-            "American Bobtail",
-            "American Curl",
-            "American Ringtail",
-            "American Shorthair",
-            "American Wirehair",
-            "Aphrodite Giant",
-            "Arabian Mau",
-            "Asian cat",
-            "Asian Semi-longhair",
-            "Australian Mist",
-            "Balinese",
-            "Bambino",
-            "Bengal",
-            "Birman",
-            "Brazilian Shorthair",
-            "British Longhair",
-            "British Shorthair",
-            "Burmese",
-            "Burmilla",
-            "California Spangled",
-            "Chantilly-Tiffany",
-            "Chartreux",
-            "Chausie",
-            "Colorpoint Shorthair",
-            "Cornish Rex",
-            "Cymric",
-            "Cyprus",
-            "Devon Rex",
-            "Donskoy",
-            "Dragon Li",
-            "Dwelf",
-            "Egyptian Mau",
-            "European Shorthair",
-            "Exotic Shorthair",
-            "Foldex",
-            "German Rex",
-            "Havana Brown",
-            "Highlander",
-            "Himalayan",
-            "Japanese Bobtail",
-            "Javanese",
-            "Kanaani",
-            "Khao Manee",
-            "Kinkalow",
-            "Korat",
-            "Korean Bobtail",
-            "Korn Ja",
-            "Kurilian Bobtail",
-            "Lambkin",
-            "LaPerm",
-            "Lykoi",
-            "Maine Coon",
-            "Manx",
-            "Mekong Bobtail",
-            "Minskin",
-            "Napoleon",
-            "Munchkin",
-            "Nebelung",
-            "Norwegian Forest Cat",
-            "Ocicat",
-            "Ojos Azules",
-            "Oregon Rex",
-            "Persian (modern)",
-            "Persian (traditional)",
-            "Peterbald",
-            "Pixie-bob",
-            "Ragamuffin",
-            "Ragdoll",
-            "Raas",
-            "Russian Blue",
-            "Russian White",
-            "Sam Sawet",
-            "Savannah",
-            "Scottish Fold",
-            "Selkirk Rex",
-            "Serengeti",
-            "Serrade Petit",
-            "Siamese",
-            "Siberian or´Siberian Forest Cat",
-            "Singapura",
-            "Snowshoe",
-            "Sokoke",
-            "Somali",
-            "Sphynx",
-            "Suphalak",
-            "Thai",
-            "Thai Lilac",
-            "Tonkinese",
-            "Toyger",
-            "Turkish Angora",
-            "Turkish Van",
-            "Turkish Vankedisi",
-            "Ukrainian Levkoy",
-            "Wila Krungthep",
-            "York Chocolate"
-        };
-
         public AutoSuggestBoxPage()
         {
             this.InitializeComponent();
@@ -129,31 +33,16 @@ namespace WinUIGallery.ControlPages
 
         private void AutoSuggestBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
         {
-            // Since selecting an item will also change the text,
-            // only listen to changes caused by user entering text.
-            if(args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
+            if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
             {
-                var suitableItems = new List<string>();
-                var splitText = sender.Text.ToLower().Split(" ");
-                foreach(var cat in Cats)
+                List<string> suggestions = new List<string>()
                 {
-                    var found = splitText.All((key)=>
-                    {
-                        return cat.ToLower().Contains(key);
-                    });
-                    if(found)
-                    {
-                        suitableItems.Add(cat);
-                    }
-                }
-                if(suitableItems.Count == 0)
-                {
-                    suitableItems.Add("No results found");
-                }
-                sender.ItemsSource = suitableItems;
+                    sender.Text + "1",
+                    sender.Text + "2"
+                };
+                Control1.ItemsSource = suggestions;
             }
         }
-
         private void AutoSuggestBox_SuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
         {
             SuggestionOutput.Text = args.SelectedItem.ToString();
@@ -234,8 +123,7 @@ namespace WinUIGallery.ControlPages
             {
                 ControlDetails.Visibility = Visibility.Visible;
 
-
-                BitmapImage image = control.IconGlyph == null? null : new BitmapImage(new Uri(control.IconGlyph));
+                BitmapImage image = new BitmapImage(new Uri(control.ImagePath));
                 ControlImage.Source = image;
 
                 ControlTitle.Text = control.Title;
@@ -256,7 +144,7 @@ namespace WinUIGallery.ControlPages
                         // Idea: check for every word entered (separated by space) if it is in the name,  
                         // e.g. for query "split button" the only result should "SplitButton" since its the only query to contain "split" and "button" 
                         // If any of the sub tokens is not in the string, we ignore the item. So the search gets more precise with more words 
-                        bool flag = item.IncludedInBuild;
+                        bool flag = true;
                         foreach (string queryToken in querySplit)
                         {
                             // Check if token is not in string 

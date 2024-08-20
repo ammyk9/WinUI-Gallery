@@ -7,13 +7,13 @@
 // PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
 //
 //*********************************************************
+using System.Collections.ObjectModel;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
-using System.Collections.ObjectModel;
 
-namespace WinUIGallery.ControlPages
+namespace AppUIBasics.ControlPages
 {
     public sealed partial class SwipeControlPage : Page
     {
@@ -31,7 +31,7 @@ namespace WinUIGallery.ControlPages
             lv.ItemsSource = items;
         }
 
-        ObservableCollection<object> items = new ObservableCollection<object>();
+        TestObservableCollection<object> items = new TestObservableCollection<object>();
 
         private void DeleteOne_ItemInvoked(SwipeItem sender, SwipeItemInvokedEventArgs args)
         {

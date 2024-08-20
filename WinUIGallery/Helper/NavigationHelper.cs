@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,17 +7,13 @@ using System.Windows.Input;
 using Windows.ApplicationModel.Core;
 using Windows.Foundation.Metadata;
 using Windows.System;
-using Microsoft.UI.Dispatching;
-using Microsoft.UI.Windowing;
+using Windows.UI.Core;
+using Windows.UI.ViewManagement;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
-using WinUIGallery.Common;
-using Windows.UI.Core;
-using Microsoft.UI.Input;
-using static CommunityToolkit.WinUI.Animations.Expressions.ExpressionValues;
 
-namespace WinUIGallery.Helper
+namespace AppUIBasics.Common
 {
     /// <summary>
     /// NavigationHelper aids in navigation between pages. It manages
@@ -79,7 +75,7 @@ namespace WinUIGallery.Helper
 
         #region Process lifetime management
 
-        private string _pageKey;
+        private String _pageKey;
 
         /// <summary>
         /// Handle this event to populate the page using content passed
@@ -120,14 +116,20 @@ namespace WinUIGallery.Helper
                 }
 
                 // Pass the navigation parameter to the new page
-                this.LoadState?.Invoke(this, new LoadStateEventArgs(e.Parameter, null));
+                if (this.LoadState != null)
+                {
+                    this.LoadState(this, new LoadStateEventArgs(e.Parameter, null));
+                }
             }
             else
             {
                 // Pass the navigation parameter and preserved page state to the page, using
                 // the same strategy for loading suspended state and recreating pages discarded
                 // from cache
-                this.LoadState?.Invoke(this, new LoadStateEventArgs(e.Parameter, (Dictionary<string, object>)frameState[this._pageKey]));
+                if (this.LoadState != null)
+                {
+                    this.LoadState(this, new LoadStateEventArgs(e.Parameter, (Dictionary<String, Object>)frameState[this._pageKey]));
+                }
             }
         }
 
@@ -141,8 +143,11 @@ namespace WinUIGallery.Helper
         public void OnNavigatedFrom(NavigationEventArgs e)
         {
             var frameState = SuspensionManager.SessionStateForFrame(this.Frame);
-            var pageState = new Dictionary<string, object>();
-            this.SaveState?.Invoke(this, new SaveStateEventArgs(pageState));
+            var pageState = new Dictionary<String, Object>();
+            if (this.SaveState != null)
+            {
+                this.SaveState(this, new SaveStateEventArgs(pageState));
+            }
             frameState[_pageKey] = pageState;
         }
 
@@ -170,23 +175,16 @@ namespace WinUIGallery.Helper
     public class RootFrameNavigationHelper
     {
         private Frame Frame { get; set; }
-        private NavigationView CurrentNavView { get; set; }
-
-#nullable enable
-        private static RootFrameNavigationHelper? instance;
+        SystemNavigationManager systemNavigationManager;
+        private Microsoft.UI.Xaml.Controls.NavigationView CurrentNavView { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RootNavigationHelper"/> class.
         /// </summary>
         /// <param name="rootFrame">A reference to the top-level frame.
         /// This reference allows for frame manipulation and to register navigation handlers.</param>
-        public RootFrameNavigationHelper(Frame rootFrame, NavigationView currentNavView)
+        public RootFrameNavigationHelper(Frame rootFrame, Microsoft.UI.Xaml.Controls.NavigationView currentNavView)
         {
-            if (instance != null)
-            {
-                return;
-            }
-
             this.Frame = rootFrame;
             this.Frame.Navigated += (s, e) =>
             {
@@ -195,95 +193,44 @@ namespace WinUIGallery.Helper
             };
             this.CurrentNavView = currentNavView;
 
-            CurrentNavView.BackRequested += NavView_BackRequested;
-            CurrentNavView.PointerPressed += CurrentNavView_PointerPressed;
-            instance = this;
-        }
+            // Handle keyboard and mouse navigation requests
+            this.systemNavigationManager = SystemNavigationManager.GetForCurrentView();
+            systemNavigationManager.BackRequested += SystemNavigationManager_BackRequested;
 
-        /// <summary>
-        /// Invoked on every keystroke, including system keys such as Alt key combinations.
-        /// Used to detect keyboard navigation between pages even when the page itself
-        /// doesn't have focus.
-        /// </summary>
-        /// <param name="sender">Instance that triggered the event.</param>
-        /// <param name="e">Event data describing the conditions that led to the event.</param>
-        public static void RaiseKeyPressed(uint keyCode)
-        {
-            if (instance == null) return;
-
-            // Only investigate further when Left, Right, or the dedicated
-            // Previous or Next keys are pressed.
-            if (keyCode == (int)VirtualKey.Left ||
-                keyCode == (int)VirtualKey.Right ||
-                keyCode == 166 ||
-                keyCode == 167 ||
-                keyCode == (int)VirtualKey.Back)
+            // must register back requested on navview
+            if (ApiInformation.IsApiContractPresent("Windows.Foundation.UniversalApiContract", 6))
             {
-                var downState = CoreVirtualKeyStates.Down;
-                // VirtualKeys 'Menu' key is also the 'Alt' key on the keyboard.
-                bool isMenuKeyPressed = (InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Menu) & downState) == downState;
-                bool isControlKeyPressed = (InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control) & downState) == downState;
-                bool isShiftKeyPressed = (InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift) & downState) == downState;
-                bool isWindowsKeyPressed = (InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.LeftWindows) & downState) == downState;
-                bool isModifierKeyPressed = !isMenuKeyPressed && !isControlKeyPressed && !isShiftKeyPressed;
-                bool isOnlyAltPressed = isMenuKeyPressed && !isControlKeyPressed && !isShiftKeyPressed;
-
-                if (((int)keyCode == 166 && isModifierKeyPressed) ||
-                    (keyCode == (int)VirtualKey.Left && isOnlyAltPressed) ||
-                    (keyCode == (int)VirtualKey.Back && isWindowsKeyPressed))
-                {
-                    // When the previous key or Alt+Left are pressed navigate back.
-                    instance.TryGoBack();
-                }
-                else if (((int)keyCode == 167 && isModifierKeyPressed) ||
-                    (keyCode == (int)VirtualKey.Right && isOnlyAltPressed))
-                {
-                    // When the next key or Alt+Right are pressed navigate forward.
-                    instance.TryGoForward();
-                }
+                CurrentNavView.BackRequested += NavView_BackRequested;
             }
+
+            // Listen to the window directly so we will respond to hotkeys regardless
+            // of which element has focus.
+            Window.Current.CoreWindow.Dispatcher.AcceleratorKeyActivated +=
+                CoreDispatcher_AcceleratorKeyActivated;
+            Window.Current.CoreWindow.PointerPressed +=
+                this.CoreWindow_PointerPressed;
         }
 
-        private void CurrentNavView_PointerPressed(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
-        {
-            var properties = e.GetCurrentPoint(CurrentNavView).Properties;
-
-            // Ignore button chords with the left, right, and middle buttons
-            if (properties.IsLeftButtonPressed || properties.IsRightButtonPressed ||
-                properties.IsMiddleButtonPressed)
-                return;
-
-            // If back or forward are pressed (but not both) navigate appropriately
-            bool backPressed = properties.IsXButton1Pressed;
-            bool forwardPressed = properties.IsXButton2Pressed;
-            if (backPressed ^ forwardPressed)
-            {
-                e.Handled = true;
-                if (backPressed) TryGoBack();
-                if (forwardPressed) TryGoForward();
-            }
-        }
-
-        private void NavView_BackRequested(NavigationView sender, NavigationViewBackRequestedEventArgs args)
+        private void NavView_BackRequested(Microsoft.UI.Xaml.Controls.NavigationView sender, Microsoft.UI.Xaml.Controls.NavigationViewBackRequestedEventArgs args)
         {
             TryGoBack();
         }
 
         private bool TryGoBack()
         {
-            bool navigated = false;
-            // Don't go back if the nav pane is overlayed.
-            if (this.CurrentNavView.IsPaneOpen && (this.CurrentNavView.DisplayMode == NavigationViewDisplayMode.Compact || this.CurrentNavView.DisplayMode == NavigationViewDisplayMode.Minimal))
+            // don't go back if the nav pane is overlayed
+            if (this.CurrentNavView.IsPaneOpen && (this.CurrentNavView.DisplayMode == Microsoft.UI.Xaml.Controls.NavigationViewDisplayMode.Compact || this.CurrentNavView.DisplayMode == Microsoft.UI.Xaml.Controls.NavigationViewDisplayMode.Minimal))
             {
-                return navigated;
+                return false;
             }
 
+            bool navigated = false;
             if (this.Frame.CanGoBack)
             {
                 this.Frame.GoBack();
                 navigated = true;
             }
-
+            
             return navigated;
         }
 
@@ -298,9 +245,94 @@ namespace WinUIGallery.Helper
             return navigated;
         }
 
+        private void SystemNavigationManager_BackRequested(object sender, BackRequestedEventArgs e)
+        {
+            if (!e.Handled)
+            {
+                e.Handled = TryGoBack();
+            }
+        }
+
         private void UpdateBackButton()
         {
-            this.CurrentNavView.IsBackEnabled = this.Frame.CanGoBack ? true : false;
+            if (ApiInformation.IsApiContractPresent("Windows.Foundation.UniversalApiContract", 6))
+            {
+                this.CurrentNavView.IsBackEnabled = this.Frame.CanGoBack ? true : false;
+            } else
+            {
+                systemNavigationManager.AppViewBackButtonVisibility = this.Frame.CanGoBack ? AppViewBackButtonVisibility.Visible : AppViewBackButtonVisibility.Collapsed;
+            }
+            
+        }
+
+        /// <summary>
+        /// Invoked on every keystroke, including system keys such as Alt key combinations.
+        /// Used to detect keyboard navigation between pages even when the page itself
+        /// doesn't have focus.
+        /// </summary>
+        /// <param name="sender">Instance that triggered the event.</param>
+        /// <param name="e">Event data describing the conditions that led to the event.</param>
+        private void CoreDispatcher_AcceleratorKeyActivated(CoreDispatcher sender,
+            AcceleratorKeyEventArgs e)
+        {
+            var virtualKey = e.VirtualKey;
+
+            // Only investigate further when Left, Right, or the dedicated Previous or Next keys
+            // are pressed
+            if ((e.EventType == CoreAcceleratorKeyEventType.SystemKeyDown ||
+                e.EventType == CoreAcceleratorKeyEventType.KeyDown) &&
+                (virtualKey == VirtualKey.Left || virtualKey == VirtualKey.Right ||
+                (int)virtualKey == 166 || (int)virtualKey == 167))
+            {
+                var coreWindow = Window.Current.CoreWindow;
+                var downState = CoreVirtualKeyStates.Down;
+                bool menuKey = (coreWindow.GetKeyState(VirtualKey.Menu) & downState) == downState;
+                bool controlKey = (coreWindow.GetKeyState(VirtualKey.Control) & downState) == downState;
+                bool shiftKey = (coreWindow.GetKeyState(VirtualKey.Shift) & downState) == downState;
+                bool noModifiers = !menuKey && !controlKey && !shiftKey;
+                bool onlyAlt = menuKey && !controlKey && !shiftKey;
+
+                if (((int)virtualKey == 166 && noModifiers) ||
+                    (virtualKey == VirtualKey.Left && onlyAlt))
+                {
+                    // When the previous key or Alt+Left are pressed navigate back
+                    e.Handled = TryGoBack();
+                }
+                else if (((int)virtualKey == 167 && noModifiers) ||
+                    (virtualKey == VirtualKey.Right && onlyAlt))
+                {
+                    // When the next key or Alt+Right are pressed navigate forward
+                    e.Handled = TryGoForward();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Invoked on every mouse click, touch screen tap, or equivalent interaction.
+        /// Used to detect browser-style next and previous mouse button clicks
+        /// to navigate between pages.
+        /// </summary>
+        /// <param name="sender">Instance that triggered the event.</param>
+        /// <param name="e">Event data describing the conditions that led to the event.</param>
+        private void CoreWindow_PointerPressed(CoreWindow sender,
+            PointerEventArgs e)
+        {
+            var properties = e.CurrentPoint.Properties;
+
+            // Ignore button chords with the left, right, and middle buttons
+            if (properties.IsLeftButtonPressed || properties.IsRightButtonPressed ||
+                properties.IsMiddleButtonPressed)
+                return;
+
+            // If back or foward are pressed (but not both) navigate appropriately
+            bool backPressed = properties.IsXButton1Pressed;
+            bool forwardPressed = properties.IsXButton2Pressed;
+            if (backPressed ^ forwardPressed)
+            {
+                e.Handled = true;
+                if (backPressed) this.TryGoBack();
+                if (forwardPressed) this.TryGoForward();
+            }
         }
     }
 
@@ -319,28 +351,28 @@ namespace WinUIGallery.Helper
     public class LoadStateEventArgs : EventArgs
     {
         /// <summary>
-        /// The parameter value passed to <see cref="Frame.Navigate(Type, object)"/>
+        /// The parameter value passed to <see cref="Frame.Navigate(Type, Object)"/>
         /// when this page was initially requested.
         /// </summary>
-        public object NavigationParameter { get; private set; }
+        public Object NavigationParameter { get; private set; }
         /// <summary>
         /// A dictionary of state preserved by this page during an earlier
         /// session.  This will be null the first time a page is visited.
         /// </summary>
-        public Dictionary<string, object> PageState { get; private set; }
+        public Dictionary<string, Object> PageState { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="LoadStateEventArgs"/> class.
         /// </summary>
         /// <param name="navigationParameter">
-        /// The parameter value passed to <see cref="Frame.Navigate(Type, object)"/>
+        /// The parameter value passed to <see cref="Frame.Navigate(Type, Object)"/>
         /// when this page was initially requested.
         /// </param>
         /// <param name="pageState">
         /// A dictionary of state preserved by this page during an earlier
         /// session.  This will be null the first time a page is visited.
         /// </param>
-        public LoadStateEventArgs(object navigationParameter, Dictionary<string, object> pageState)
+        public LoadStateEventArgs(Object navigationParameter, Dictionary<string, Object> pageState)
             : base()
         {
             this.NavigationParameter = navigationParameter;
@@ -355,13 +387,13 @@ namespace WinUIGallery.Helper
         /// <summary>
         /// An empty dictionary to be populated with serializable state.
         /// </summary>
-        public Dictionary<string, object> PageState { get; private set; }
+        public Dictionary<string, Object> PageState { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SaveStateEventArgs"/> class.
         /// </summary>
         /// <param name="pageState">An empty dictionary to be populated with serializable state.</param>
-        public SaveStateEventArgs(Dictionary<string, object> pageState)
+        public SaveStateEventArgs(Dictionary<string, Object> pageState)
             : base()
         {
             this.PageState = pageState;

@@ -1,11 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Microsoft.UI.Xaml.Controls;
-using WinUIGallery.SamplePages;
+using AppUIBasics.SamplePages;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml;
 
-namespace WinUIGallery.ControlPages
+namespace AppUIBasics.ControlPages
 {
     public sealed partial class ConnectedAnimationPage : Page
     {
@@ -13,36 +13,34 @@ namespace WinUIGallery.ControlPages
         {
             this.InitializeComponent();
 
-            // For 1st sample
+            ContentFrame.Navigate(typeof(SamplePage1));
+
             CollectionContentFrame.Navigate(typeof(ConnectedAnimationPages.CollectionPage));
 
-            // For 2nd sample
             CardFrame.Navigate(typeof(ConnectedAnimationPages.CardPage));
-
-            // For 3rd sample
-            ContentFrame.Navigate(typeof(SamplePage1));
-            
         }
 
         private ConnectedAnimationConfiguration GetConfiguration()
         {
-            if(this.ConfigurationPanel == null)
+            foreach(RadioButton rb in ConfigurationPanel.Children)
             {
-                return null;
+                if (rb.IsChecked == true)
+                {
+                    switch (rb.Content.ToString())
+                    {
+                        case "Default":
+                            return null;
+                        case "Gravity":
+                            return new GravityConnectedAnimationConfiguration();
+                        case "Direct":
+                            return new DirectConnectedAnimationConfiguration();
+                        case "Basic":
+                            return new BasicConnectedAnimationConfiguration();
+                    }
+                }
             }
-            
-            var selectedName = (ConfigurationPanel.SelectedItem as RadioButton).Content.ToString();
-            switch (selectedName)
-            {
-                case "Gravity":
-                    return new GravityConnectedAnimationConfiguration();
-                case "Direct":
-                    return new DirectConnectedAnimationConfiguration();
-                case "Basic":
-                    return new BasicConnectedAnimationConfiguration();
-                default:
-                    return null;
-            }
+
+            return null;
         }
 
         private void NavigateButton_Click(object sender, RoutedEventArgs e)
@@ -65,17 +63,17 @@ namespace WinUIGallery.ControlPages
     // Sample data object used to populate the collection page.
     public class CustomDataObject
     {
-        public string Title { get; set; }
-        public string ImageLocation { get; set; }
-        public string Views { get; set; }
+        public String Title { get; set; }
+        public String ImageLocation { get; set; }
+        public String Views { get; set; }
         public string Likes { get; set; }
-        public string Description { get; set; }
+        public String Description { get; set; }
 
         public CustomDataObject()
         {
         }
 
-        public static List<CustomDataObject> GetDataObjects(bool includeAllItems = false)
+        public static List<CustomDataObject> GetDataObjects()
         {
             string[] dummyTexts = new[] {
                 @"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer id facilisis lectus. Cras nec convallis ante, quis pulvinar tellus. Integer dictum accumsan pulvinar. Pellentesque eget enim sodales sapien vestibulum consequat.",
@@ -89,7 +87,7 @@ namespace WinUIGallery.ControlPages
             };
 
             Random rand = new Random();
-            int numberOfLocations = includeAllItems ? 13 : 8;
+            const int numberOfLocations = 8;
             List<CustomDataObject> objects = new List<CustomDataObject>();
             for (int i = 0; i < numberOfLocations; i++)
             {

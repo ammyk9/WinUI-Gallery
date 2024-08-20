@@ -1,16 +1,23 @@
-using System;
+﻿using System;
+using System.Collections.ObjectModel;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
+using Microsoft.UI.Xaml.Data;
+using mux = Microsoft.UI.Xaml.Controls;
 
-namespace WinUIGallery.ControlPages
+
+// The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=234238
+
+namespace AppUIBasics.ControlPages
 {
+    /// <summary>
+    /// An empty page that can be used on its own or navigated to within a Frame.
+    /// </summary>
     public sealed partial class TreeViewPage : Page
     {
-        TreeViewNode personalFolder;
-        TreeViewNode personalFolder2;
-        private ObservableCollection<ExplorerItem> DataSource;
+        mux.TreeViewNode personalFolder;
+        mux.TreeViewNode personalFolder2;
+        private TestObservableCollection<ExplorerItem> DataSource;
 
         public TreeViewPage()
         {
@@ -24,23 +31,23 @@ namespace WinUIGallery.ControlPages
 
         private void InitializeSampleTreeView()
         {
-            TreeViewNode workFolder = new TreeViewNode() { Content = "Work Documents" };
+            mux.TreeViewNode workFolder = new mux.TreeViewNode() { Content = "Work Documents" };
             workFolder.IsExpanded = true;
 
-            workFolder.Children.Add(new TreeViewNode() { Content = "XYZ Functional Spec" });
-            workFolder.Children.Add(new TreeViewNode() { Content = "Feature Schedule" });
-            workFolder.Children.Add(new TreeViewNode() { Content = "Overall Project Plan" });
-            workFolder.Children.Add(new TreeViewNode() { Content = "Feature Resources Allocation" });
+            workFolder.Children.Add(new mux.TreeViewNode() { Content = "XYZ Functional Spec" });
+            workFolder.Children.Add(new mux.TreeViewNode() { Content = "Feature Schedule" });
+            workFolder.Children.Add(new mux.TreeViewNode() { Content = "Overall Project Plan" });
+            workFolder.Children.Add(new mux.TreeViewNode() { Content = "Feature Resources Allocation" });
 
-            TreeViewNode remodelFolder = new TreeViewNode() { Content = "Home Remodel" };
+            mux.TreeViewNode remodelFolder = new mux.TreeViewNode() { Content = "Home Remodel" };
             remodelFolder.IsExpanded = true;
 
-            remodelFolder.Children.Add(new TreeViewNode() { Content = "Contractor Contact Info" });
-            remodelFolder.Children.Add(new TreeViewNode() { Content = "Paint Color Scheme" });
-            remodelFolder.Children.Add(new TreeViewNode() { Content = "Flooring woodgrain type" });
-            remodelFolder.Children.Add(new TreeViewNode() { Content = "Kitchen cabinet style" });
+            remodelFolder.Children.Add(new mux.TreeViewNode() { Content = "Contractor Contact Info" });
+            remodelFolder.Children.Add(new mux.TreeViewNode() { Content = "Paint Color Scheme" });
+            remodelFolder.Children.Add(new mux.TreeViewNode() { Content = "Flooring woodgrain type" });
+            remodelFolder.Children.Add(new mux.TreeViewNode() { Content = "Kitchen cabinet style" });
 
-            personalFolder = new TreeViewNode() { Content = "Personal Documents" };
+            personalFolder = new mux.TreeViewNode() { Content = "Personal Documents" };
             personalFolder.IsExpanded = true;
             personalFolder.Children.Add(remodelFolder);
 
@@ -49,23 +56,23 @@ namespace WinUIGallery.ControlPages
         }
         private void InitializeSampleTreeView2()
         {
-            TreeViewNode workFolder = new TreeViewNode() { Content = "Work Documents" };
+            mux.TreeViewNode workFolder = new mux.TreeViewNode() { Content = "Work Documents" };
             workFolder.IsExpanded = true;
 
-            workFolder.Children.Add(new TreeViewNode() { Content = "XYZ Functional Spec" });
-            workFolder.Children.Add(new TreeViewNode() { Content = "Feature Schedule" });
-            workFolder.Children.Add(new TreeViewNode() { Content = "Overall Project Plan" });
-            workFolder.Children.Add(new TreeViewNode() { Content = "Feature Resources Allocation" });
+            workFolder.Children.Add(new mux.TreeViewNode() { Content = "XYZ Functional Spec" });
+            workFolder.Children.Add(new mux.TreeViewNode() { Content = "Feature Schedule" });
+            workFolder.Children.Add(new mux.TreeViewNode() { Content = "Overall Project Plan" });
+            workFolder.Children.Add(new mux.TreeViewNode() { Content = "Feature Resources Allocation" });
 
-            TreeViewNode remodelFolder = new TreeViewNode() { Content = "Home Remodel" };
+            mux.TreeViewNode remodelFolder = new mux.TreeViewNode() { Content = "Home Remodel" };
             remodelFolder.IsExpanded = true;
 
-            remodelFolder.Children.Add(new TreeViewNode() { Content = "Contractor Contact Info" });
-            remodelFolder.Children.Add(new TreeViewNode() { Content = "Paint Color Scheme" });
-            remodelFolder.Children.Add(new TreeViewNode() { Content = "Flooring woodgrain type" });
-            remodelFolder.Children.Add(new TreeViewNode() { Content = "Kitchen cabinet style" });
+            remodelFolder.Children.Add(new mux.TreeViewNode() { Content = "Contractor Contact Info" });
+            remodelFolder.Children.Add(new mux.TreeViewNode() { Content = "Paint Color Scheme" });
+            remodelFolder.Children.Add(new mux.TreeViewNode() { Content = "Flooring woodgrain type" });
+            remodelFolder.Children.Add(new mux.TreeViewNode() { Content = "Kitchen cabinet style" });
 
-            personalFolder2 = new TreeViewNode() { Content = "Personal Documents" };
+            personalFolder2 = new mux.TreeViewNode() { Content = "Personal Documents" };
             personalFolder2.IsExpanded = true;
             personalFolder2.Children.Add(remodelFolder);
 
@@ -73,14 +80,14 @@ namespace WinUIGallery.ControlPages
             sampleTreeView2.RootNodes.Add(personalFolder2);
         }
 
-        private void sampleTreeView_ItemInvoked(TreeView sender, TreeViewItemInvokedEventArgs args)
+        private void sampleTreeView_ItemInvoked(mux.TreeView sender, mux.TreeViewItemInvokedEventArgs args)
         {
             return;
         }
         
-        private ObservableCollection<ExplorerItem> GetData()
+        private TestObservableCollection<ExplorerItem> GetData()
         {
-            var list = new ObservableCollection<ExplorerItem>();
+            var list = new TestObservableCollection<ExplorerItem>();
             ExplorerItem folder1 = new ExplorerItem()
             {
                 Name = "Work Documents",
@@ -161,20 +168,20 @@ namespace WinUIGallery.ControlPages
 
     }
 
-    public partial class ExplorerItem : INotifyPropertyChanged
+    public class ExplorerItem : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
         public enum ExplorerItemType { Folder, File };
-        public string Name { get; set; }
+        public String Name { get; set; }
         public ExplorerItemType Type { get; set; }
-        private ObservableCollection<ExplorerItem> m_children;
-        public ObservableCollection<ExplorerItem> Children
+        private TestObservableCollection<ExplorerItem> m_children;
+        public TestObservableCollection<ExplorerItem> Children
         {
             get
             {
                 if (m_children == null)
                 {
-                    m_children = new ObservableCollection<ExplorerItem>();
+                    m_children = new TestObservableCollection<ExplorerItem>();
                 }
                 return m_children;
             }
@@ -198,13 +205,32 @@ namespace WinUIGallery.ControlPages
             }
         }
 
-        private void NotifyPropertyChanged(string propertyName)
+        private bool m_isSelected;
+        public bool IsSelected
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            get { return m_isSelected; }
+
+            set
+            {
+                if (m_isSelected != value)
+                {
+                    m_isSelected = value;
+                    NotifyPropertyChanged("IsSelected");
+                }
+            }
+
+        }
+
+        private void NotifyPropertyChanged(String propertyName)
+        {
+            if (PropertyChanged != null)
+            {
+                PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+            }
         }
     }
 
-    partial class ExplorerItemTemplateSelector : DataTemplateSelector
+    class ExplorerItemTemplateSelector : DataTemplateSelector
     {
         public DataTemplate FolderTemplate { get; set; }
         public DataTemplate FileTemplate { get; set; }

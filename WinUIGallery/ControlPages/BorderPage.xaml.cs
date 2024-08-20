@@ -24,7 +24,7 @@ namespace WinUIGallery.ControlPages
 
         private void ThicknessSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
         {
-            if (Control1 != null) Control1.BorderThickness = new Thickness(e.NewValue);
+            if (Control1 != null) Control1.BorderThickness = ThicknessHelper.FromUniformLength(e.NewValue);
         }
 
         private void BGRadioButton_Checked(object sender, RoutedEventArgs e)

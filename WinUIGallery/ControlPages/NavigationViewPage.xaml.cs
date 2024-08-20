@@ -1,25 +1,30 @@
-using WinUIGallery.SamplePages;
-using WinUIGallery.Common;
+﻿using AppUIBasics.SamplePages;
+using AppUIBasics.Common;
+using System.Collections.ObjectModel;
 using Microsoft.UI.Xaml.Controls;
 using System;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Microsoft.UI.Xaml;
 using System.Linq;
 using Windows.System;
 using Microsoft.UI.Xaml.Automation;
 
-namespace WinUIGallery.ControlPages
+// The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=234238
+
+namespace AppUIBasics.ControlPages
 {
+    /// <summary>
+    /// An empty page that can be used on its own or navigated to within a Frame.
+    /// </summary>
     public sealed partial class NavigationViewPage : Page
     {
-        public static bool CameFromToggle = false;
+        public static Boolean CameFromToggle = false;
 
-        public static bool CameFromGridChange = false;
+        public static Boolean CameFromGridChange = false;
 
         public VirtualKey ArrowKey;
 
-        public ObservableCollection<CategoryBase> Categories { get; set; }
+        public TestObservableCollection<CategoryBase> Categories { get; set; }
 
         public NavigationViewPage()
         {
@@ -29,10 +34,8 @@ namespace WinUIGallery.ControlPages
             nvSample5.SelectedItem = nvSample5.MenuItems.OfType<Microsoft.UI.Xaml.Controls.NavigationViewItem>().First();
             nvSample6.SelectedItem = nvSample6.MenuItems.OfType<Microsoft.UI.Xaml.Controls.NavigationViewItem>().First();
             nvSample7.SelectedItem = nvSample7.MenuItems.OfType<Microsoft.UI.Xaml.Controls.NavigationViewItem>().First();
-            nvSample8.SelectedItem = nvSample8.MenuItems.OfType<Microsoft.UI.Xaml.Controls.NavigationViewItem>().First();
-            nvSample9.SelectedItem = nvSample9.MenuItems.OfType<Microsoft.UI.Xaml.Controls.NavigationViewItem>().First();
 
-            Categories = new ObservableCollection<CategoryBase>();
+            Categories = new TestObservableCollection<CategoryBase>();
             Category firstCategory = new Category { Name = "Category 1", Glyph = Symbol.Home, Tooltip = "This is category 1" };
             Categories.Add(firstCategory);
             Categories.Add(new Category { Name = "Category 2", Glyph = Symbol.Keyboard, Tooltip = "This is category 2" });
@@ -46,7 +49,7 @@ namespace WinUIGallery.ControlPages
             nvSample2.UpdateLayout();
         }
 
-        public Microsoft.UI.Xaml.Controls.NavigationViewPaneDisplayMode ChoosePanePosition(bool toggleOn)
+        public Microsoft.UI.Xaml.Controls.NavigationViewPaneDisplayMode ChoosePanePosition(Boolean toggleOn)
         {
             if (toggleOn)
             {
@@ -70,7 +73,7 @@ namespace WinUIGallery.ControlPages
                 {
                     string selectedItemTag = ((string)selectedItem.Tag);
                     sender.Header = "Sample Page " + selectedItemTag.Substring(selectedItemTag.Length - 1);
-                    string pageName = "WinUIGallery.SamplePages." + selectedItemTag;
+                    string pageName = "AppUIBasics.SamplePages." + selectedItemTag;
                     Type pageType = Type.GetType(pageName);
                     contentFrame.Navigate(pageType);
                 }
@@ -89,12 +92,12 @@ namespace WinUIGallery.ControlPages
                 {
                     var selectedItem = (Microsoft.UI.Xaml.Controls.NavigationViewItem)args.SelectedItem;
                     string selectedItemTag = ((string)selectedItem.Tag);
-                    string pageName = "WinUIGallery.SamplePages." + selectedItemTag;
+                    string pageName = "AppUIBasics.SamplePages." + selectedItemTag;
                     Type pageType = Type.GetType(pageName);
                     contentFrame2.Navigate(pageType);
                 }
             }
-
+            
             CameFromGridChange = false;
         }
 
@@ -111,7 +114,7 @@ namespace WinUIGallery.ControlPages
                 var selectedItem = (Category)args.SelectedItem;
                 string selectedItemTag = selectedItem.Name;
                 sender.Header = "Sample Page " + selectedItemTag.Substring(selectedItemTag.Length - 1);
-                string pageName = "WinUIGallery.SamplePages." + "SamplePage1";
+                string pageName = "AppUIBasics.SamplePages." + "SamplePage1";
                 Type pageType = Type.GetType(pageName);
                 contentFrame4.Navigate(pageType);
             }
@@ -129,7 +132,7 @@ namespace WinUIGallery.ControlPages
                 var selectedItem = (Microsoft.UI.Xaml.Controls.NavigationViewItem)args.SelectedItem;
                 string selectedItemTag = ((string)selectedItem.Tag);
                 sender.Header = "Sample Page " + selectedItemTag.Substring(selectedItemTag.Length - 1);
-                string pageName = "WinUIGallery.SamplePages." + selectedItemTag;
+                string pageName = "AppUIBasics.SamplePages." + selectedItemTag;
                 Type pageType = Type.GetType(pageName);
                 contentFrame5.Navigate(pageType);
             }
@@ -143,7 +146,7 @@ namespace WinUIGallery.ControlPages
             else
             {
                 var selectedItem = (Microsoft.UI.Xaml.Controls.NavigationViewItem)args.SelectedItem;
-                string pageName = "WinUIGallery.SamplePages." + ((string)selectedItem.Tag);
+                string pageName = "AppUIBasics.SamplePages." + ((string)selectedItem.Tag);
                 Type pageType = Type.GetType(pageName);
                 contentFrame6.Navigate(pageType);
             }
@@ -158,44 +161,42 @@ namespace WinUIGallery.ControlPages
             else
             {
                 var selectedItem = (Microsoft.UI.Xaml.Controls.NavigationViewItem)args.SelectedItem;
-                string pageName = "WinUIGallery.SamplePages." + ((string)selectedItem.Tag);
+                string pageName = "AppUIBasics.SamplePages." + ((string)selectedItem.Tag);
                 Type pageType = Type.GetType(pageName);
 
                 contentFrame7.Navigate(pageType, null, args.RecommendedNavigationTransitionInfo);
             }
         }
-
-        private void NavigationView_SelectionChanged8(Microsoft.UI.Xaml.Controls.NavigationView sender, Microsoft.UI.Xaml.Controls.NavigationViewSelectionChangedEventArgs args)
+ 
+        private void databindHeader_Checked(object sender, RoutedEventArgs e)
         {
-            /* NOTE: for this function to work, every NavigationView must follow the same naming convention: nvSample# (i.e. nvSample3),
-            and every corresponding content frame must follow the same naming convention: contentFrame# (i.e. contentFrame3) */
-
-            // Get the sample number
-            string sampleNum = (sender.Name).Substring(8);
-            Debug.Print("num: " + sampleNum + "\n");
-
-            if (args.IsSettingsSelected)
+            Categories = new TestObservableCollection<CategoryBase>()
             {
-                contentFrame8.Navigate(typeof(SampleSettingsPage));
-            }
-            else
-            {
-                var selectedItem = (Microsoft.UI.Xaml.Controls.NavigationViewItem)args.SelectedItem;
-                string selectedItemTag = ((string)selectedItem.Tag);
-                sender.Header = "Sample Page " + selectedItemTag.Substring(selectedItemTag.Length - 1);
-                string pageName = "WinUIGallery.SamplePages." + selectedItemTag;
-                Type pageType = Type.GetType(pageName);
-                contentFrame8.Navigate(pageType);
-            }
+                new Header { Name = "Header1 "},
+                new Category { Name = "Category 1", Glyph = Symbol.Home, Tooltip = "This is category 1" },
+                new Category { Name = "Category 2", Glyph = Symbol.Keyboard, Tooltip = "This is category 2" },
+                new Separator(),
+                new Header { Name = "Header2 "},
+                new Category {Name = "Category 3", Glyph = Symbol.Library, Tooltip = "This is category 3" },
+                new Category {Name = "Category 4", Glyph = Symbol.Mail, Tooltip = "This is category 3" }
+            };
         }
 
-        private void NavigationView_SelectionChanged9(Microsoft.UI.Xaml.Controls.NavigationView sender, Microsoft.UI.Xaml.Controls.NavigationViewSelectionChangedEventArgs args)
+        private void databindHeader_Checked_Unchecked(object sender, RoutedEventArgs e)
         {
-            var selectedItem = (Microsoft.UI.Xaml.Controls.NavigationViewItem)args.SelectedItem;
-            string pageName = "WinUIGallery.SamplePages." + ((string)selectedItem.Tag);
-            Type pageType = Type.GetType(pageName);
+            Categories = new TestObservableCollection<CategoryBase>()
+            {
+                new Category { Name = "Category 1", Glyph = Symbol.Home, Tooltip = "This is category 1" },
+                new Category { Name = "Category 2", Glyph = Symbol.Keyboard, Tooltip = "This is category 2" },
+                new Category {Name = "Category 3", Glyph = Symbol.Library, Tooltip = "This is category 3" },
+                new Category {Name = "Category 4", Glyph = Symbol.Mail, Tooltip = "This is category 3" }
+            };
+        }
 
-            contentFrame9.Navigate(pageType, null, args.RecommendedNavigationTransitionInfo);
+        private void Grid_ManipulationDelta1(object sender, Microsoft.UI.Xaml.Input.ManipulationDeltaRoutedEventArgs e)
+        {
+            var grid = sender as Grid;
+            grid.Width = grid.ActualWidth + e.Delta.Translation.X;
         }
 
         private void headerCheck_Click(object sender, RoutedEventArgs e)
@@ -273,60 +274,22 @@ namespace WinUIGallery.ControlPages
 
         private void panePositionLeft_Checked(object sender, RoutedEventArgs e)
         {
-            if ((sender as RadioButton).IsChecked == true)
+            if ((sender as RadioButton).IsChecked == true && nvSample != null)
             {
-                if ((sender as RadioButton).Name == "nvSampleLeft" && nvSample != null)
-                {
-                    nvSample.PaneDisplayMode = Microsoft.UI.Xaml.Controls.NavigationViewPaneDisplayMode.Left;
-                    nvSample.IsPaneOpen = true;
-                    FooterStackPanel.Orientation = Orientation.Vertical;
-                }
-                else if ((sender as RadioButton).Name == "nvSample8Left" && nvSample8 != null)
-                {
-                    nvSample8.PaneDisplayMode = Microsoft.UI.Xaml.Controls.NavigationViewPaneDisplayMode.Left;
-                    nvSample8.IsPaneOpen = true;
-                }
-                else if ((sender as RadioButton).Name == "nvSample9Left" && nvSample9 != null)
-                {
-                    nvSample9.PaneDisplayMode = Microsoft.UI.Xaml.Controls.NavigationViewPaneDisplayMode.Left;
-                    nvSample9.IsPaneOpen = true;
-                }
+                nvSample.PaneDisplayMode = Microsoft.UI.Xaml.Controls.NavigationViewPaneDisplayMode.Left;
+                nvSample.IsPaneOpen = true;
+                FooterStackPanel.Orientation = Orientation.Vertical;
             }
         }
 
 
         private void panePositionTop_Checked(object sender, RoutedEventArgs e)
         {
-            if ((sender as RadioButton).IsChecked == true)
+            if ((sender as RadioButton).IsChecked == true && nvSample != null)
             {
-                if ((sender as RadioButton).Name == "nvSampleTop" && nvSample != null)
-                {
-                    nvSample.PaneDisplayMode = Microsoft.UI.Xaml.Controls.NavigationViewPaneDisplayMode.Top;
-                    nvSample.IsPaneOpen = false;
-                    FooterStackPanel.Orientation = Orientation.Horizontal;
-                }
-                else if ((sender as RadioButton).Name == "nvSample8Top" && nvSample8 != null)
-                {
-                    nvSample8.PaneDisplayMode = Microsoft.UI.Xaml.Controls.NavigationViewPaneDisplayMode.Top;
-                    nvSample8.IsPaneOpen = false;
-                }
-                else if ((sender as RadioButton).Name == "nvSample9Top" && nvSample9 != null)
-                {
-                    nvSample9.PaneDisplayMode = Microsoft.UI.Xaml.Controls.NavigationViewPaneDisplayMode.Top;
-                    nvSample9.IsPaneOpen = false;
-                }
-            }
-        }
-
-        private void panePositionLeftCompact_Checked(object sender, RoutedEventArgs e)
-        {
-            if ((sender as RadioButton).IsChecked == true)
-            {
-                if ((sender as RadioButton).Name == "nvSample8LeftCompact" && nvSample8 != null)
-                {
-                    nvSample8.PaneDisplayMode = Microsoft.UI.Xaml.Controls.NavigationViewPaneDisplayMode.LeftCompact;
-                    nvSample8.IsPaneOpen = false;
-                }
+                nvSample.PaneDisplayMode = Microsoft.UI.Xaml.Controls.NavigationViewPaneDisplayMode.Top;
+                nvSample.IsPaneOpen = false;
+                FooterStackPanel.Orientation = Orientation.Horizontal;
             }
         }
 

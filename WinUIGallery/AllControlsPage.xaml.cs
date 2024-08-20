@@ -1,4 +1,4 @@
-//*********************************************************
+﻿//*********************************************************
 //
 // Copyright (c) Microsoft. All rights reserved.
 // THIS CODE IS PROVIDED *AS IS* WITHOUT WARRANTY OF
@@ -7,11 +7,11 @@
 // PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
 //
 //*********************************************************
-using WinUIGallery.Data;
+using AppUIBasics.Data;
 using System.Linq;
 using Microsoft.UI.Xaml.Navigation;
 
-namespace WinUIGallery
+namespace AppUIBasics
 {
     /// <summary>
     /// A page that displays a grouped collection of items.
@@ -25,12 +25,16 @@ namespace WinUIGallery
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            NavigationRootPageArgs args = (NavigationRootPageArgs)e.Parameter;
-
-            var menuItem = (Microsoft.UI.Xaml.Controls.NavigationViewItem)args.NavigationRootPage.NavigationView.MenuItems.ElementAt(2);
+            var menuItem = NavigationRootPage.Current.NavigationView.MenuItems.Cast<Microsoft.UI.Xaml.Controls.NavigationViewItem>().ElementAt(1);
             menuItem.IsSelected = true;
+            NavigationRootPage.Current.NavigationView.Header = string.Empty;
 
-            Items = ControlInfoDataSource.Instance.Groups.Where(g => !g.IsSpecialSection).SelectMany(g => g.Items).OrderBy(i => i.Title).ToList();
+            Items = ControlInfoDataSource.Instance.Groups.SelectMany(g => g.Items).OrderBy(i => i.Title).ToList();
+        }
+
+        protected override bool GetIsNarrowLayoutState()
+        {
+            return LayoutVisualStates.CurrentState == NarrowLayout;
         }
     }
 }

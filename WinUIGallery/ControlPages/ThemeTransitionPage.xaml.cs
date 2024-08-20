@@ -14,8 +14,13 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.UI.Xaml.Shapes;
 
-namespace WinUIGallery.ControlPages
+// The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=234238
+
+namespace AppUIBasics.ControlPages
 {
+    /// <summary>
+    /// An empty page that can be used on its own or navigated to within a Frame.
+    /// </summary>
     public sealed partial class ThemeTransitionPage : Page
     {
 
@@ -83,8 +88,7 @@ namespace WinUIGallery.ControlPages
 
             for (int i = 0; i < value; i++)
             {
-                Thickness thickness = new Thickness(5.0);
-                EntranceStackPanel.Children.Add(new Rectangle() { Width = 50, Height = 50, Margin = thickness, Fill = new SolidColorBrush(Microsoft.UI.Colors.LightBlue) });
+                EntranceStackPanel.Children.Add(new Rectangle() { Width = 50, Height = 50, Margin = ThicknessHelper.FromUniformLength(5.0), Fill = new SolidColorBrush(Microsoft.UI.Colors.LightBlue) });
             }
         }
 

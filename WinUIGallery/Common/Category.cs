@@ -1,7 +1,7 @@
-using System;
+﻿using System;
 using Microsoft.UI.Xaml.Controls;
 
-namespace WinUIGallery.Common
+namespace AppUIBasics.Common
 {
 
     public class CategoryBase { }
@@ -11,6 +11,7 @@ namespace WinUIGallery.Common
         public string Name { get; set; }
         public string Tooltip { get; set; }
         public Symbol Glyph { get; set; }
+        //public Type TargetType { get; set; }
     }
 
     public class Separator : CategoryBase { }

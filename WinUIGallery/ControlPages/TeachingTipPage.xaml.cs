@@ -1,4 +1,4 @@
-//*********************************************************
+﻿//*********************************************************
 //
 // Copyright (c) Microsoft. All rights reserved.
 // THIS CODE IS PROVIDED *AS IS* WITHOUT WARRANTY OF
@@ -9,9 +9,10 @@
 //*********************************************************
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Input;
 
-namespace WinUIGallery.ControlPages
+// The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=234238
+
+namespace AppUIBasics.ControlPages
 {
     public sealed partial class TeachingTipPage : Page
     {
@@ -22,17 +23,26 @@ namespace WinUIGallery.ControlPages
 
         private void TestButtonClick1(object sender, RoutedEventArgs e)
         {
-            ToggleThemeTeachingTip1.IsOpen = true;
+            if (NavigationRootPage.Current?.PageHeader != null)
+            {
+                NavigationRootPage.Current.PageHeader.TeachingTip1.IsOpen = true;
+            }
         }
 
         private void TestButtonClick2(object sender, RoutedEventArgs e)
         {
-            ToggleThemeTeachingTip2.IsOpen = true;
+            if (NavigationRootPage.Current?.PageHeader != null)
+            {
+                NavigationRootPage.Current.PageHeader.TeachingTip2.IsOpen = true;
+            }
         }
 
         private void TestButtonClick3(object sender, RoutedEventArgs e)
         {
-            ToggleThemeTeachingTip3.IsOpen = true;
+            if (NavigationRootPage.Current?.PageHeader != null)
+            {
+                NavigationRootPage.Current.PageHeader.TeachingTip3.IsOpen = true;
+            }
         }
     }
 }

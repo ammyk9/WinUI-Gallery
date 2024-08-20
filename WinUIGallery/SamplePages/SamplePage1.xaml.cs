@@ -1,9 +1,9 @@
-using Windows.Foundation.Metadata;
+﻿using Windows.Foundation.Metadata;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
 
-namespace WinUIGallery.SamplePages
+namespace AppUIBasics.SamplePages
 {
     public sealed partial class SamplePage1 : Page
     {

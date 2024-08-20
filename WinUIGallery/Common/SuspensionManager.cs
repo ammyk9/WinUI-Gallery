@@ -1,16 +1,17 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Runtime.Serialization;
+using System.Text;
 using System.Threading.Tasks;
+using Windows.ApplicationModel;
 using Windows.Storage;
 using Windows.Storage.Streams;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using WinUIGallery.Helper;
 
-namespace WinUIGallery.Common
+namespace AppUIBasics.Common
 {
     /// <summary>
     /// SuspensionManager captures global session state to simplify process lifetime management
@@ -54,8 +55,6 @@ namespace WinUIGallery.Common
         /// to save its state.
         /// </summary>
         /// <returns>An asynchronous task that reflects when session state has been saved.</returns>
-        [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026",
-            Justification = "From manual inspection, _sessionState only serializes Dictionaries of strings")]
         public static async Task SaveAsync()
         {
             try
@@ -63,7 +62,8 @@ namespace WinUIGallery.Common
                 // Save the navigation state for all registered frames
                 foreach (var weakFrameReference in _registeredFrames)
                 {
-                    if (weakFrameReference.TryGetTarget(out Frame frame))
+                    Frame frame;
+                    if (weakFrameReference.TryGetTarget(out frame))
                     {
                         SaveFrameNavigationState(frame);
                     }
@@ -76,8 +76,7 @@ namespace WinUIGallery.Common
                 serializer.WriteObject(sessionData, _sessionState);
 
                 // Get an output stream for the SessionState file and write the state asynchronously
-                StorageFolder localFolder = WindowHelper.GetAppLocalFolder();
-                StorageFile file = await localFolder.CreateFileAsync(sessionStateFilename, CreationCollisionOption.ReplaceExisting);
+                StorageFile file = await ApplicationData.Current.LocalFolder.CreateFileAsync(sessionStateFilename, CreationCollisionOption.ReplaceExisting);
                 using (Stream fileStream = await file.OpenStreamForWriteAsync())
                 {
                     sessionData.Seek(0, SeekOrigin.Begin);
@@ -99,18 +98,14 @@ namespace WinUIGallery.Common
         /// <returns>An asynchronous task that reflects when session state has been read.  The
         /// content of <see cref="SessionState"/> should not be relied upon until this task
         /// completes.</returns>
-        [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026",
-            Justification = "From manual inspection, _sessionState only serializes Dictionaries of strings")]
         public static async Task RestoreAsync()
         {
-            _sessionState = new Dictionary<string, object>();
+            _sessionState = new Dictionary<String, Object>();
 
             try
             {
                 // Get the input stream for the SessionState file
-                StorageFolder localFolder = WindowHelper.GetAppLocalFolder();
-
-                StorageFile file = await localFolder.GetFileAsync(sessionStateFilename);
+                StorageFile file = await ApplicationData.Current.LocalFolder.GetFileAsync(sessionStateFilename);
                 using (IInputStream inStream = await file.OpenSequentialReadAsync())
                 {
                     // Deserialize the Session State
@@ -121,7 +116,8 @@ namespace WinUIGallery.Common
                 // Restore any registered frames to their saved state
                 foreach (var weakFrameReference in _registeredFrames)
                 {
-                    if (weakFrameReference.TryGetTarget(out Frame frame))
+                    Frame frame;
+                    if (weakFrameReference.TryGetTarget(out frame))
                     {
                         frame.ClearValue(FrameSessionStateProperty);
                         RestoreFrameNavigationState(frame);
@@ -135,9 +131,9 @@ namespace WinUIGallery.Common
         }
 
         private static DependencyProperty FrameSessionStateKeyProperty =
-            DependencyProperty.RegisterAttached("_FrameSessionStateKey", typeof(String), typeof(SuspensionManager), new PropertyMetadata(null));
+            DependencyProperty.RegisterAttached("_FrameSessionStateKey", typeof(String), typeof(SuspensionManager), null);
         private static DependencyProperty FrameSessionStateProperty =
-            DependencyProperty.RegisterAttached("_FrameSessionState", typeof(Dictionary<String, Object>), typeof(SuspensionManager), new PropertyMetadata(null));
+            DependencyProperty.RegisterAttached("_FrameSessionState", typeof(Dictionary<String, Object>), typeof(SuspensionManager), null);
         private static List<WeakReference<Frame>> _registeredFrames = new List<WeakReference<Frame>>();
 
         /// <summary>
@@ -152,7 +148,7 @@ namespace WinUIGallery.Common
         /// <see cref="SuspensionManager"/></param>
         /// <param name="sessionStateKey">A unique key into <see cref="SessionState"/> used to
         /// store navigation-related information.</param>
-        public static void RegisterFrame(Frame frame, string sessionStateKey)
+        public static void RegisterFrame(Frame frame, String sessionStateKey)
         {
             if (frame.GetValue(FrameSessionStateKeyProperty) != null)
             {
@@ -184,10 +180,11 @@ namespace WinUIGallery.Common
         {
             // Remove session state and remove the frame from the list of frames whose navigation
             // state will be saved (along with any weak references that are no longer reachable)
-            SessionState.Remove((string)frame.GetValue(FrameSessionStateKeyProperty));
+            SessionState.Remove((String)frame.GetValue(FrameSessionStateKeyProperty));
             _registeredFrames.RemoveAll((weakFrameReference) =>
             {
-                return !weakFrameReference.TryGetTarget(out Frame testFrame) || testFrame == frame;
+                Frame testFrame;
+                return !weakFrameReference.TryGetTarget(out testFrame) || testFrame == frame;
             });
         }
 
@@ -204,26 +201,26 @@ namespace WinUIGallery.Common
         /// <param name="frame">The instance for which session state is desired.</param>
         /// <returns>A collection of state subject to the same serialization mechanism as
         /// <see cref="SessionState"/>.</returns>
-        public static Dictionary<string, object> SessionStateForFrame(Frame frame)
+        public static Dictionary<String, Object> SessionStateForFrame(Frame frame)
         {
-            var frameState = (Dictionary<string, object>)frame.GetValue(FrameSessionStateProperty);
+            var frameState = (Dictionary<String, Object>)frame.GetValue(FrameSessionStateProperty);
 
             if (frameState == null)
             {
-                var frameSessionKey = (string)frame.GetValue(FrameSessionStateKeyProperty);
+                var frameSessionKey = (String)frame.GetValue(FrameSessionStateKeyProperty);
                 if (frameSessionKey != null)
                 {
                     // Registered frames reflect the corresponding session state
                     if (!_sessionState.ContainsKey(frameSessionKey))
                     {
-                        _sessionState[frameSessionKey] = new Dictionary<string, object>();
+                        _sessionState[frameSessionKey] = new Dictionary<String, Object>();
                     }
-                    frameState = (Dictionary<string, object>)_sessionState[frameSessionKey];
+                    frameState = (Dictionary<String, Object>)_sessionState[frameSessionKey];
                 }
                 else
                 {
                     // Frames that aren't registered have transient state
-                    frameState = new Dictionary<string, object>();
+                    frameState = new Dictionary<String, Object>();
                 }
                 frame.SetValue(FrameSessionStateProperty, frameState);
             }
@@ -235,7 +232,7 @@ namespace WinUIGallery.Common
             var frameState = SessionStateForFrame(frame);
             if (frameState.ContainsKey("Navigation"))
             {
-                frame.SetNavigationState((string)frameState["Navigation"]);
+                frame.SetNavigationState((String)frameState["Navigation"]);
             }
         }
 

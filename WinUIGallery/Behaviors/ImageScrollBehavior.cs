@@ -1,22 +1,20 @@
-using WinUIGallery.Helper;
-using Microsoft.Xaml.Interactivity;
+﻿using Microsoft.Xaml.Interactivity;
 using System.Linq;
 using Windows.Storage;
-using Microsoft.UI;
+using Windows.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 
-namespace WinUIGallery.Behaviors
+namespace AppUIBasics.Behaviors
 {
-    public partial class ImageScrollBehavior : DependencyObject, IBehavior
+    public class ImageScrollBehavior : DependencyObject, IBehavior
     {
         private const int _opacityMaxValue = 250;
         private const int _alpha = 255;
-        private const int _maxFontSize = 28;
-        private const int _minFontSize = 10;
-        private const int scrollViewerThresholdValue = 85;
-
+        private const int _maxFontSize = 42;
+        private const int _minFontSize = 24;
+        private const int scrollViewerThresholdValue = 190;
         private ScrollViewer scrollViewer;
         private ListViewBase listGridView;
 
@@ -49,7 +47,7 @@ namespace WinUIGallery.Behaviors
 
         private bool GetScrollViewer()
         {
-            scrollViewer = Helper.UIHelper.GetDescendantsOfType<ScrollViewer>(AssociatedObject).FirstOrDefault();
+            scrollViewer = Common.UIHelper.GetDescendantsOfType<ScrollViewer>(AssociatedObject).FirstOrDefault();
             if (scrollViewer != null)
             {
                 scrollViewer.ViewChanging += ScrollViewer_ViewChanging;
@@ -68,7 +66,8 @@ namespace WinUIGallery.Behaviors
             {
                 VisualStateManager.GoToState(header, "DefaultForeground", false);
                 header.BackgroundColorOpacity = 0;
-                header.FontSize = 28;
+                header.FontSize = 42;
+                header.Foreground = new SolidColorBrush(Colors.White);
                 header.AcrylicOpacity = 0.3;
             }
             else if (verticalOffset > scrollViewerThresholdValue)
@@ -78,11 +77,11 @@ namespace WinUIGallery.Behaviors
             }
             else
             {
-                if (ThemeHelper.ActualTheme != ElementTheme.Dark)
+                if (App.ActualTheme != ElementTheme.Dark)
                 {
                     VisualStateManager.GoToState(header, "DefaultForeground", false);
-                    Color foreground = new Color() { A = (byte)((verticalOffset > scrollViewerThresholdValue) ? 0 : (_alpha * (1 - (verticalOffset / scrollViewerThresholdValue)))) };
-                    foreground.R = foreground.G = foreground.B = 0;
+                    Color foreground = new Color() { A = _alpha };
+                    foreground.R = foreground.G = foreground.B = (byte)((verticalOffset > _alpha) ? 0 : (_alpha - verticalOffset));
                     header.Foreground = new SolidColorBrush(foreground);
                 }
                 else

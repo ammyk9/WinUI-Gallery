@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Numerics;
 using Windows.Foundation.Metadata;
 using Microsoft.UI.Composition;
@@ -7,9 +7,8 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
-using System.Globalization;
 
-namespace WinUIGallery.ControlPages
+namespace AppUIBasics.ControlPages
 {
     public sealed partial class XamlCompInteropPage : Page
     {
@@ -18,7 +17,7 @@ namespace WinUIGallery.ControlPages
             this.InitializeComponent();
         }
 
-        Compositor _compositor = Microsoft.UI.Xaml.Media.CompositionTarget.GetCompositorForCurrentThread();
+        Compositor _compositor = Window.Current.Compositor;
         private SpringVector3NaturalMotionAnimation _springAnimation;
 
         private void NaturalMotionExample_Loaded(object sender, RoutedEventArgs e)
@@ -41,11 +40,12 @@ namespace WinUIGallery.ControlPages
 
         float GetDampingRatio()
         {
-            if(DampingStackPanel.SelectedItem != null)
+            foreach (RadioButton rb in DampingStackPanel.Children)
             {
-                // We need to specify the InvariantCulture since the decimal point depends on the
-                // system language and might parse "0.8" to 8 since the decimal point is a different character
-                return (float)Convert.ToDouble((DampingStackPanel.SelectedItem as RadioButton).Content, CultureInfo.InvariantCulture);
+                if (rb.IsChecked == true)
+                {
+                    return (float)Convert.ToDouble(rb.Content);
+                }
             }
             return 0.6f;
         }
@@ -122,7 +122,7 @@ namespace WinUIGallery.ControlPages
             String yOffset = "0"; // We don't need to offset y because the buttons naturally layout vertically centered.
 
             // We combine X, Y, and Z subchannels into a single animation because we can only start a single animation on Translation.
-            String expression = string.Format("Vector3({0}*cos({1})+{2}, {0}*sin({1})+{3},0)", radius, theta, xOffset, yOffset);
+            String expression = String.Format("Vector3({0}*cos({1})+{2}, {0}*sin({1})+{3},0)", radius, theta, xOffset, yOffset);
 
             int totalElements = 8;
             for (int i = 0; i < totalElements; i++)

@@ -1,16 +1,15 @@
-using System;
+﻿using System;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
-using WinUIGallery.SamplePages;
-using WinUIGallery.Helper;
+using AppUIBasics.SamplePages;
 using Windows.ApplicationModel.Core;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Windowing;
-using Microsoft.UI.Dispatching;
-using WinUIGallery.TabViewPages;
+using Windows.UI.ViewManagement;
+using Windows.UI.Core;
+using AppUIBasics.TabViewPages;
 using System.Collections.ObjectModel;
 
-namespace WinUIGallery.ControlPages
+namespace AppUIBasics.ControlPages
 {
     public class MyData
     {
@@ -21,20 +20,16 @@ namespace WinUIGallery.ControlPages
 
     public sealed partial class TabViewPage : Page
     {
-        ObservableCollection<MyData> myDatas;
+        TestObservableCollection<MyData> myDatas;
 
         public TabViewPage()
         {
             this.InitializeComponent();
 
-            // Launching isn't supported yet on Desktop
-            // Blocked on Task 27517663: DCPP Preview 2 Bug: Dragging in TabView windowing sample causes app to crash
-            //this.LaunchExample.Visibility = Visibility.Collapsed;
-
             InitializeDataBindingSampleData();
         }
 
-#region SharedTabViewLogic
+        #region SharedTabViewLogic
         private void TabView_Loaded(object sender, RoutedEventArgs e)
         {
             for (int i = 0; i < 3; i++)
@@ -55,11 +50,10 @@ namespace WinUIGallery.ControlPages
 
         private TabViewItem CreateNewTab(int index)
         {
-            TabViewItem newItem = new TabViewItem
-            {
-                Header = $"Document {index}",
-                IconSource = new Microsoft.UI.Xaml.Controls.SymbolIconSource() { Symbol = Symbol.Document }
-            };
+            TabViewItem newItem = new TabViewItem();
+
+            newItem.Header = $"Document {index}";
+            newItem.IconSource = new Microsoft.UI.Xaml.Controls.SymbolIconSource() { Symbol = Symbol.Document };
 
             // The content of the tab is often a frame that contains a page, though it could be any UIElement.
             Frame frame = new Frame();
@@ -81,12 +75,12 @@ namespace WinUIGallery.ControlPages
 
             return newItem;
         }
-#endregion
+        #endregion
 
-#region ItemsSourceSample
+        #region ItemsSourceSample
         private void InitializeDataBindingSampleData()
         {
-            myDatas = new ObservableCollection<MyData>();
+            myDatas = new TestObservableCollection<MyData>();
 
             for (int index = 0; index < 3; index++)
             {
@@ -96,11 +90,9 @@ namespace WinUIGallery.ControlPages
 
         private MyData CreateNewMyData(int index)
         {
-            var newData = new MyData
-            {
-                DataHeader = $"MyData Doc {index}",
-                DataIconSource = new Microsoft.UI.Xaml.Controls.SymbolIconSource() { Symbol = Symbol.Placeholder }
-            };
+            var newData = new MyData();
+            newData.DataHeader = $"MyData Doc {index}";
+            newData.DataIconSource = new Microsoft.UI.Xaml.Controls.SymbolIconSource() { Symbol = Symbol.Placeholder };
 
             Frame frame = new Frame();
 
@@ -130,12 +122,12 @@ namespace WinUIGallery.ControlPages
 
         private void TabViewItemsSourceSample_TabCloseRequested(TabView sender, TabViewTabCloseRequestedEventArgs args)
         {
-            // Remove the requested MyData object from the collection.
+            // Remove the requested MyData object from the collection. 
             myDatas.Remove(args.Item as MyData);
         }
-#endregion
+        #endregion
 
-#region KeyboardAcceleratorSample
+        #region KeyboardAcceleratorSample
         private void NewTabKeyboardAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
         {
             var senderTabView = args.Element as TabView;
@@ -203,7 +195,7 @@ namespace WinUIGallery.ControlPages
 
             args.Handled = true;
         }
-#endregion
+        #endregion
 
         private void TabWidthBehaviorComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -217,44 +209,25 @@ namespace WinUIGallery.ControlPages
                 case "SizeToContent":
                     widthMode = TabViewWidthMode.SizeToContent;
                     break;
-                case "Compact":
-                    widthMode = TabViewWidthMode.Compact;
-                    break;
             }
             TabView3.TabWidthMode = widthMode;
         }
 
-        private void TabCloseButtonOverlayModeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private async void TabViewWindowingButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
         {
-            string overlayModeString = (e.AddedItems[0] as ComboBoxItem).Content.ToString();
-            TabViewCloseButtonOverlayMode overlayMode = TabViewCloseButtonOverlayMode.Auto;
-            switch (overlayModeString)
+            CoreApplicationView newView = CoreApplication.CreateNewView();
+            int newViewId = 0;
+            await newView.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
             {
-                case "Auto":
-                    overlayMode = TabViewCloseButtonOverlayMode.Auto;
-                    break;
-                case "OnHover":
-                    overlayMode = TabViewCloseButtonOverlayMode.OnPointerOver;
-                    break;
-                case "Always":
-                    overlayMode = TabViewCloseButtonOverlayMode.Always;
-                    break;
-            }
-            TabView4.CloseButtonOverlayMode = overlayMode;
-        }
+                Frame frame = new Frame();
+                frame.Navigate(typeof(TabViewWindowingSamplePage), null);
+                Window.Current.Content = frame;
+                // You have to activate the window in order to show it later.
+                Window.Current.Activate();
 
-        private void TabViewWindowingButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
-        {
-            var tabViewSample = new TabViewWindowingSamplePage();
-
-            var newWindow = WindowHelper.CreateWindow();
-            newWindow.ExtendsContentIntoTitleBar = true;
-            newWindow.Content = tabViewSample;
-            newWindow.AppWindow.SetIcon("Assets/Tiles/GalleryIcon.ico");
-            tabViewSample.LoadDemoData();
-            tabViewSample.SetupWindowMinSize(newWindow);
-
-            newWindow.Activate();
+                newViewId = ApplicationView.GetForCurrentView().Id;
+            });
+            bool viewShown = await ApplicationViewSwitcher.TryShowAsStandaloneAsync(newViewId);
         }
     }
 }

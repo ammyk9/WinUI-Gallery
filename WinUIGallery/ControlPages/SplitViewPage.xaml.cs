@@ -1,4 +1,4 @@
-using WinUIGallery.Helper;
+﻿using AppUIBasics.Common;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -16,12 +16,16 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.UI;
 
+// The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=234238
 
-namespace WinUIGallery.ControlPages
+namespace AppUIBasics.ControlPages
 {
+    /// <summary>
+    /// An empty page that can be used on its own or navigated to within a Frame.
+    /// </summary>
     public sealed partial class SplitViewPage : Page
     {
-        private ObservableCollection<NavLink> _navLinks = new ObservableCollection<NavLink>()
+        private TestObservableCollection<NavLink> _navLinks =  new TestObservableCollection<NavLink>()
         {
             new NavLink() { Label = "People", Symbol = Symbol.People  },
             new NavLink() { Label = "Globe", Symbol = Symbol.Globe },
@@ -29,7 +33,7 @@ namespace WinUIGallery.ControlPages
             new NavLink() { Label = "Mail", Symbol = Symbol.Mail },
         };
 
-        public ObservableCollection<NavLink> NavLinks
+        public TestObservableCollection<NavLink> NavLinks
         {
             get { return _navLinks; }
         }
@@ -39,9 +43,25 @@ namespace WinUIGallery.ControlPages
             this.InitializeComponent();
         }
 
-        private void NavLinksList_ItemClick(object sender, ItemClickEventArgs e)
+        private void togglePaneButton_Click(object sender, RoutedEventArgs e)
         {
-            content.Text = (e.ClickedItem as NavLink).Label + " Page";
+            if (Window.Current.Bounds.Width >= 640)
+            {
+                if (splitView.IsPaneOpen)
+                {
+                    splitView.DisplayMode = SplitViewDisplayMode.CompactOverlay;
+                    splitView.IsPaneOpen = false;
+                }
+                else
+                {
+                    splitView.IsPaneOpen = true;
+                    splitView.DisplayMode = SplitViewDisplayMode.Inline;
+                }
+            }
+            else
+            {
+                splitView.IsPaneOpen = !splitView.IsPaneOpen;
+            }
         }
 
         private void PanePlacement_Toggled(object sender, RoutedEventArgs e)
@@ -55,6 +75,11 @@ namespace WinUIGallery.ControlPages
             {
                 splitView.PanePlacement = SplitViewPanePlacement.Left;
             }
+        }
+
+        private void NavLinksList_ItemClick(object sender, ItemClickEventArgs e)
+        {
+            content.Text = (e.ClickedItem as NavLink).Label + " Page";
         }
 
         private void displayModeCombobox_SelectionChanged(object sender, SelectionChangedEventArgs e)
