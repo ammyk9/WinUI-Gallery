@@ -1,21 +1,26 @@
 using System;
-using System.Collections.ObjectModel;
 using Windows.Foundation.Metadata;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 
+#if !UNIVERSAL
+using System.Collections.ObjectModel;
+using System.Windows.Input;
+using ICommand = System.Windows.Input.ICommand;
+#endif
+
 namespace AppUIBasics.ControlPages
 {
     public class ListItemData
     {
-        public String Text { get; set; }
+        public string Text { get; set; }
         public ICommand Command { get; set; }
     }
 
     public sealed partial class StandardUICommandPage : Page
     {
-        TestObservableCollection<ListItemData> collection = new TestObservableCollection<ListItemData>();
+        ObservableCollection<ListItemData> collection = new ObservableCollection<ListItemData>();
 
         public StandardUICommandPage()
         {

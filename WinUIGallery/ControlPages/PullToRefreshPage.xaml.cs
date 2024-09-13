@@ -1,10 +1,11 @@
-﻿using System;
-using System.Collections.ObjectModel;
+using AppUIBasics.Helper;
+using System;
 using Windows.Foundation;
 using Windows.Foundation.Metadata;
-using Microsoft.UI.Composition;
 using Windows.UI.Core;
 using Windows.UI.ViewManagement;
+using Microsoft.UI.Composition;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Hosting;
@@ -12,22 +13,24 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
 
-// The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
+#if !UNIVERSAL
+using System.Collections.ObjectModel;
+#endif
 
 namespace AppUIBasics.ControlPages
 {
-    /// <summary>
-    /// An empty page that can be used on its own or navigated to within a Frame.
-    /// </summary>
     public sealed partial class PullToRefreshPage : Page
     {
-        private TestObservableCollection<string> items1 = new TestObservableCollection<string>();
-        private TestObservableCollection<string> items2 = new TestObservableCollection<string>();
+        private ObservableCollection<string> items1 = new ObservableCollection<string>();
+        private ObservableCollection<string> items2 = new ObservableCollection<string>();
         private DispatcherTimer timer1 = new DispatcherTimer();
         private DispatcherTimer timer2 = new DispatcherTimer();
         private Visual visualizerContentVisual;
         private static RefreshContainer rc2;
         private RefreshVisualizer rv2;
+
+        private int items1AddedCount = 0;
+        private int items2AddedCount = 0;
 
         private Deferral RefreshCompletionDeferral1
         {
@@ -57,7 +60,7 @@ namespace AppUIBasics.ControlPages
                 Image ptrImage = new Image();
                 AccessibilitySettings accessibilitySettings = new AccessibilitySettings();
                 // Checking light theme
-                if ((App.RootTheme == ElementTheme.Light || Application.Current.RequestedTheme == ApplicationTheme.Light) 
+                if ((ThemeHelper.RootTheme == ElementTheme.Light || Application.Current.RequestedTheme == ApplicationTheme.Light) 
                     && !accessibilitySettings.HighContrast)
                 {
                     ptrImage.Source = new BitmapImage(new Uri("ms-appx:///Assets/SunBlack.png"));
@@ -80,12 +83,14 @@ namespace AppUIBasics.ControlPages
                 rv2.Content = ptrImage;
                 rc2.Visualizer = rv2;
 
-                ListView lv2 = new ListView();
-                lv2.Width = 200;
-                lv2.Height = 200;
-                lv2.BorderThickness = ThicknessHelper.FromUniformLength(1);
-                lv2.HorizontalAlignment = HorizontalAlignment.Center;
-                lv2.BorderBrush = (Brush)Application.Current.Resources["TextControlBorderBrush"];
+                ListView lv2 = new ListView
+                {
+                    Width = 200,
+                    Height = 200,
+                    BorderThickness = new Thickness() { Left = 1, Top = 1, Right = 1, Bottom = 1 },
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    BorderBrush = (Brush)Application.Current.Resources["TextControlBorderBrush"]
+                };
 
 
                 rc2.Content = lv2;
@@ -119,32 +124,32 @@ namespace AppUIBasics.ControlPages
             this.Loaded -= PullToRefreshPage_Loaded;
         }
 
-        async private void Timer1_Tick(object sender, object e)
+        private void Timer1_Tick(object sender, object e)
         {
-            CoreDispatcher disp = Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher;
+            DispatcherQueue disp = rc.DispatcherQueue;
             if (disp.HasThreadAccess)
             {
                 Timer1_TickImpl();
             }
             else
             {
-                await disp.RunAsync(CoreDispatcherPriority.Normal, () =>
+                disp.TryEnqueue(DispatcherQueuePriority.Normal, () =>
                 {
                     Timer1_TickImpl();
                 });
             }
         }
 
-        async private void Timer2_Tick(object sender, object e)
+        private void Timer2_Tick(object sender, object e)
         {
-            CoreDispatcher disp = Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher;
+            DispatcherQueue disp = rc2.DispatcherQueue;
             if (disp.HasThreadAccess)
             {
                 Timer2_TickImpl();
             }
             else
             {
-                await disp.RunAsync(CoreDispatcherPriority.Normal, () =>
+                disp.TryEnqueue(DispatcherQueuePriority.Normal, () =>
                 {
                     Timer2_TickImpl();
                 });
@@ -153,7 +158,7 @@ namespace AppUIBasics.ControlPages
 
         private void Timer1_TickImpl()
         {
-            items1.Insert(0, "NewControl");
+            items1.Insert(0, "NewControl " + items1AddedCount++);
             timer1.Stop();
             if (this.RefreshCompletionDeferral1 != null)
             {
@@ -165,7 +170,7 @@ namespace AppUIBasics.ControlPages
 
         private void Timer2_TickImpl()
         {
-            items2.Insert(0, "New Friend");
+            items2.Insert(0, "New Friend " + items2AddedCount++);
             timer2.Stop();
             if (this.RefreshCompletionDeferral2 != null)
             {

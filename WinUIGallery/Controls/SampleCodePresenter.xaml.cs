@@ -11,27 +11,20 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using WinUIGallery.Helper;
+using System.Threading.Tasks;
+using AppUIBasics.Helper;
 using ColorCode;
 using ColorCode.Common;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
+using Windows.System;
+using Windows.UI.Core;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
-using System.Reflection;
-using System.IO;
-using Microsoft.UI.Xaml.Automation;
 
-namespace WinUIGallery.Controls
+namespace AppUIBasics.Controls
 {
-    public enum SampleCodePresenterType
-    {
-        XAML,
-        CSharp,
-        Inline
-    }
-
     public sealed partial class SampleCodePresenter : UserControl
     {
         public static readonly DependencyProperty CodeProperty = DependencyProperty.Register("Code", typeof(string), typeof(SampleCodePresenter), new PropertyMetadata("", OnDependencyPropertyChanged));
@@ -42,17 +35,17 @@ namespace WinUIGallery.Controls
         }
 
         public static readonly DependencyProperty CodeSourceFileProperty = DependencyProperty.Register("CodeSourceFile", typeof(object), typeof(SampleCodePresenter), new PropertyMetadata(null, OnDependencyPropertyChanged));
-        public string CodeSourceFile
+        public Uri CodeSourceFile
         {
-            get { return (string)GetValue(CodeSourceFileProperty); }
+            get { return (Uri)GetValue(CodeSourceFileProperty); }
             set { SetValue(CodeSourceFileProperty, value); }
         }
 
-        public static readonly DependencyProperty SampleTypeProperty = DependencyProperty.Register("SampleType", typeof(SampleCodePresenterType), typeof(SampleCodePresenter), new PropertyMetadata(SampleCodePresenterType.XAML));
-        public SampleCodePresenterType SampleType
+        public static readonly DependencyProperty IsCSharpSampleProperty = DependencyProperty.Register("IsCSharpSample", typeof(bool), typeof(SampleCodePresenter), new PropertyMetadata(false));
+        public bool IsCSharpSample
         {
-            get { return (SampleCodePresenterType)GetValue(SampleTypeProperty); }
-            set { SetValue(SampleTypeProperty, value); }
+            get { return (bool)GetValue(IsCSharpSampleProperty); }
+            set { SetValue(IsCSharpSampleProperty, value); }
         }
 
         public static readonly DependencyProperty SubstitutionsProperty = DependencyProperty.Register("Substitutions", typeof(IList<ControlExampleSubstitution>), typeof(ControlExample), new PropertyMetadata(null));
@@ -62,7 +55,7 @@ namespace WinUIGallery.Controls
             set { SetValue(SubstitutionsProperty, value); }
         }
 
-        public bool IsEmpty => string.IsNullOrEmpty(Code) && string.IsNullOrEmpty(CodeSourceFile);
+        public bool IsEmpty => Code.Length == 0 && CodeSourceFile == null;
 
         private string actualCode = "";
         private static Regex SubstitutionPattern = new Regex(@"\$\(([^\)]+)\)");
@@ -77,13 +70,12 @@ namespace WinUIGallery.Controls
             if (target is SampleCodePresenter presenter)
             {
                 presenter.ReevaluateVisibility();
-                presenter.GenerateSyntaxHighlightedContent();
             }
         }
 
         private void ReevaluateVisibility()
         {
-            if (IsEmpty)
+            if (Code.Length == 0 && CodeSourceFile == null)
             {
                 Visibility = Visibility.Collapsed;
             }
@@ -96,26 +88,10 @@ namespace WinUIGallery.Controls
         private void SampleCodePresenter_Loaded(object sender, RoutedEventArgs e)
         {
             ReevaluateVisibility();
-            VisualStateManager.GoToState(this, GetSampleLanguageVisualState(), false);
-            if (Substitutions != null)
+            VisualStateManager.GoToState(this, IsCSharpSample ? "CSharpSample" : "XAMLSample", false);
+            foreach (var substitution in Substitutions)
             {
-                foreach (var substitution in Substitutions)
-                {
-                    substitution.ValueChanged += OnValueChanged;
-                }
-            }
-        }
-
-        private string GetSampleLanguageVisualState()
-        {
-            switch (SampleType)
-            {
-                case SampleCodePresenterType.XAML:
-                    return "XAMLSample";
-                case SampleCodePresenterType.CSharp:
-                    return "CSharpSample";
-                default:
-                    return "InlineSample";
+                substitution.ValueChanged += OnValueChanged;
             }
         }
 
@@ -136,56 +112,38 @@ namespace WinUIGallery.Controls
             GenerateSyntaxHighlightedContent();
         }
 
-        private Uri GetDerivedSource(string sourceRelativePath)
+        private Uri GetDerivedSource(Uri rawSource)
         {
-            Uri derivedSource = new Uri(new Uri("ms-appx:///ControlPagesSampleCode/"), sourceRelativePath);
+            // Get the full path of the source string
+            string concatString = "";
+            for (int i = 2; i < rawSource.Segments.Length; i++)
+            {
+                concatString += rawSource.Segments[i];
+            }
+            Uri derivedSource = new Uri(new Uri("ms-appx:///ControlPagesSampleCode/"), concatString);
 
             return derivedSource;
         }
 
-        private string GetDerivedSourceUnpackaged(string sourceRelativePath)
-        {
-            string derviedSourceString = "ControlPagesSampleCode\\" + sourceRelativePath;
-            return derviedSourceString;
-        }
-
         private void GenerateSyntaxHighlightedContent()
         {
-            var language = SampleType switch
-            {
-                SampleCodePresenterType.XAML => Languages.Xml,
-                SampleCodePresenterType.CSharp => Languages.CSharp,
-                _ => Languages.Markdown
-            };
             if (!string.IsNullOrEmpty(Code))
             {
-                FormatAndRenderSampleFromString(Code, CodePresenter, language);
+                FormatAndRenderSampleFromString(Code, CodePresenter, IsCSharpSample ? Languages.CSharp : Languages.Xml);
             }
             else
             {
-                FormatAndRenderSampleFromFile(CodeSourceFile, CodePresenter, language);
+                FormatAndRenderSampleFromFile(CodeSourceFile, CodePresenter, IsCSharpSample ? Languages.CSharp : Languages.Xml);
             }
         }
 
-        private async void FormatAndRenderSampleFromFile(string sourceRelativePath, ContentPresenter presenter, ILanguage highlightLanguage)
+        private async void FormatAndRenderSampleFromFile(Uri source, ContentPresenter presenter, ILanguage highlightLanguage)
         {
-            if (sourceRelativePath != null && sourceRelativePath.EndsWith("txt"))
+            if (source != null && source.AbsolutePath.EndsWith("txt"))
             {
-                string sampleString = null;
-                StorageFile file = null;
-                if (!NativeHelper.IsAppPackaged)
-                {
-                    var relativePath = GetDerivedSourceUnpackaged(sourceRelativePath);
-                    var sourcePath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, relativePath));
-                    file = await StorageFile.GetFileFromPathAsync(sourcePath);
-                }
-                else
-                {
-                    Uri derivedSource = GetDerivedSource(sourceRelativePath);
-                    file = await StorageFile.GetFileFromApplicationUriAsync(derivedSource);
-                }
-
-                sampleString = await FileIO.ReadTextAsync(file);
+                Uri derivedSource = GetDerivedSource(source);
+                var file = await StorageFile.GetFileFromApplicationUriAsync(derivedSource);
+                string sampleString = await FileIO.ReadTextAsync(file);
 
                 FormatAndRenderSampleFromString(sampleString, presenter, highlightLanguage);
             }
@@ -203,102 +161,100 @@ namespace WinUIGallery.Controls
             // Also trim out spaces at the end of each line
             sampleString = string.Join('\n', sampleString.Split('\n').Select(s => s.TrimEnd()));
 
-            if(Substitutions != null)
+            // Perform any applicable substitutions.
+            sampleString = SubstitutionPattern.Replace(sampleString, match =>
             {
-                // Perform any applicable substitutions.
-                sampleString = SubstitutionPattern.Replace(sampleString, match =>
+                foreach (var substitution in Substitutions)
                 {
-                    foreach (var substitution in Substitutions)
+                    if (substitution.Key == match.Groups[1].Value)
                     {
-                        if (substitution.Key == match.Groups[1].Value)
-                        {
-                            return substitution.ValueAsString();
-                        }
+                        return substitution.ValueAsString();
                     }
-                    throw new KeyNotFoundException(match.Groups[1].Value);
-                });
-            }
+                }
+                throw new KeyNotFoundException(match.Groups[1].Value);
+            });
 
             actualCode = sampleString;
 
-            var name = GetSampleLanguageVisualState() == "InlineSample" ? actualCode : SampleType.ToString();
-            var automationName = "Copy " + name + " Code";
-            AutomationProperties.SetName(CopyCodeButton, automationName);
+            var sampleCodeRTB = new RichTextBlock { FontFamily = new FontFamily("Consolas") };
 
-            var formatter = GenerateRichTextFormatter();
-            if (SampleType == SampleCodePresenterType.Inline)
-            {
-                CodeScrollViewer.Content = new TextBlock() { FontFamily = new FontFamily("Consolas"), Text = actualCode, IsTextSelectionEnabled = true, TextTrimming = TextTrimming.CharacterEllipsis };
-                CodeScrollViewer.UpdateLayout();
-            }
-            else
-            {
-                var sampleCodeRTB = new RichTextBlock { FontFamily = new FontFamily("Consolas") };
-                formatter.FormatRichTextBlock(sampleString, highlightLanguage, sampleCodeRTB);
-                CodePresenter.Content = sampleCodeRTB;
-                CodeScrollViewer.Content = CodePresenter;
-            }
+            //var formatter = GenerateRichTextFormatter();
+            //formatter.FormatRichTextBlock(sampleString, highlightLanguage, sampleCodeRTB);
+            presenter.Content = new TextBlock() { Text = sampleString, FontFamily = new FontFamily("Consolas"), IsTextSelectionEnabled = true }; // sampleCodeRTB;
         }
 
-        private RichTextBlockFormatter GenerateRichTextFormatter()
-        {
-            var formatter = new RichTextBlockFormatter(ThemeHelper.ActualTheme);
+        //private RichTextBlockFormatter GenerateRichTextFormatter()
+        //{
+        //    var formatter = new RichTextBlockFormatter(ThemeHelper.ActualTheme);
 
-            if (ThemeHelper.ActualTheme == ElementTheme.Dark)
-            {
-                UpdateFormatterDarkThemeColors(formatter);
-            }
+        //    if (ThemeHelper.ActualTheme == ElementTheme.Dark)
+        //    {
+        //        UpdateFormatterDarkThemeColors(formatter);
+        //    }
 
-            return formatter;
-        }
+        //    return formatter;
+        //}
 
-        private void UpdateFormatterDarkThemeColors(RichTextBlockFormatter formatter)
-        {
-            // Replace the default dark theme resources with ones that more closely align to VS Code dark theme.
-            formatter.Styles.Remove(formatter.Styles[ScopeName.XmlAttribute]);
-            formatter.Styles.Remove(formatter.Styles[ScopeName.XmlAttributeQuotes]);
-            formatter.Styles.Remove(formatter.Styles[ScopeName.XmlAttributeValue]);
-            formatter.Styles.Remove(formatter.Styles[ScopeName.HtmlComment]);
-            formatter.Styles.Remove(formatter.Styles[ScopeName.XmlDelimiter]);
-            formatter.Styles.Remove(formatter.Styles[ScopeName.XmlName]);
+        //private void UpdateFormatterDarkThemeColors(RichTextBlockFormatter formatter)
+        //{
+        //    // Replace the default dark theme resources with ones that more closely align to VS Code dark theme.
+        //    formatter.Styles.Remove(formatter.Styles[ScopeName.XmlAttribute]);
+        //    formatter.Styles.Remove(formatter.Styles[ScopeName.XmlAttributeQuotes]);
+        //    formatter.Styles.Remove(formatter.Styles[ScopeName.XmlAttributeValue]);
+        //    formatter.Styles.Remove(formatter.Styles[ScopeName.HtmlComment]);
+        //    formatter.Styles.Remove(formatter.Styles[ScopeName.XmlDelimiter]);
+        //    formatter.Styles.Remove(formatter.Styles[ScopeName.XmlName]);
 
-            formatter.Styles.Add(new ColorCode.Styling.Style(ScopeName.XmlAttribute)
-            {
-                Foreground = "#FF87CEFA",
-                ReferenceName = "xmlAttribute"
-            });
-            formatter.Styles.Add(new ColorCode.Styling.Style(ScopeName.XmlAttributeQuotes)
-            {
-                Foreground = "#FFFFA07A",
-                ReferenceName = "xmlAttributeQuotes"
-            });
-            formatter.Styles.Add(new ColorCode.Styling.Style(ScopeName.XmlAttributeValue)
-            {
-                Foreground = "#FFFFA07A",
-                ReferenceName = "xmlAttributeValue"
-            });
-            formatter.Styles.Add(new ColorCode.Styling.Style(ScopeName.HtmlComment)
-            {
-                Foreground = "#FF6B8E23",
-                ReferenceName = "htmlComment"
-            });
-            formatter.Styles.Add(new ColorCode.Styling.Style(ScopeName.XmlDelimiter)
-            {
-                Foreground = "#FF808080",
-                ReferenceName = "xmlDelimiter"
-            });
-            formatter.Styles.Add(new ColorCode.Styling.Style(ScopeName.XmlName)
-            {
-                Foreground = "#FF5F82E8",
-                ReferenceName = "xmlName"
-            });
-        }
+        //    formatter.Styles.Add(new ColorCode.Styling.Style(ScopeName.XmlAttribute)
+        //    {
+        //        Foreground = "#FF87CEFA",
+        //        ReferenceName = "xmlAttribute"
+        //    });
+        //    formatter.Styles.Add(new ColorCode.Styling.Style(ScopeName.XmlAttributeQuotes)
+        //    {
+        //        Foreground = "#FFFFA07A",
+        //        ReferenceName = "xmlAttributeQuotes"
+        //    });
+        //    formatter.Styles.Add(new ColorCode.Styling.Style(ScopeName.XmlAttributeValue)
+        //    {
+        //        Foreground = "#FFFFA07A",
+        //        ReferenceName = "xmlAttributeValue"
+        //    });
+        //    formatter.Styles.Add(new ColorCode.Styling.Style(ScopeName.HtmlComment)
+        //    {
+        //        Foreground = "#FF6B8E23",
+        //        ReferenceName = "htmlComment"
+        //    });
+        //    formatter.Styles.Add(new ColorCode.Styling.Style(ScopeName.XmlDelimiter)
+        //    {
+        //        Foreground = "#FF808080",
+        //        ReferenceName = "xmlDelimiter"
+        //    });
+        //    formatter.Styles.Add(new ColorCode.Styling.Style(ScopeName.XmlName)
+        //    {
+        //        Foreground = "#FF5F82E8",
+        //        ReferenceName = "xmlName"
+        //    });
+        //}
 
         private void CopyCodeButton_Click(object sender, RoutedEventArgs e)
         {
             DataPackage package = new DataPackage();
             package.SetText(actualCode);
             Clipboard.SetContent(package);
+
+            VisualStateManager.GoToState(this, "ConfirmationDialogVisible", false);
+            Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+
+            // Automatically close teachingtip after 1 seconds
+            if (dispatcherQueue != null)
+            {
+                dispatcherQueue.TryEnqueue(async () =>
+                {
+                    await Task.Delay(1000);
+                    VisualStateManager.GoToState(this, "ConfirmationDialogHidden", false);
+                });
+            }
         }
     }
 }

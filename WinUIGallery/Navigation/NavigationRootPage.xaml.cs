@@ -7,6 +7,9 @@
 // PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
 //
 //*********************************************************
+using AppUIBasics.Common;
+using AppUIBasics.Data;
+using AppUIBasics.Helper;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -14,28 +17,33 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using WinUIGallery.Data;
-using WinUIGallery.Helper;
-using Microsoft.UI.Windowing;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Automation;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Navigation;
+using Windows.ApplicationModel.Core;
+using Windows.Devices.Input;
 using Windows.Foundation;
+using Windows.Foundation.Metadata;
+using Windows.Gaming.Input;
 using Windows.System.Profile;
 using Windows.UI.ViewManagement;
-using WinUIGallery.DesktopWap.Helper;
+using Microsoft.UI.Dispatching;
+using Microsoft.UI;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Navigation;
 
-namespace WinUIGallery
+namespace AppUIBasics
 {
     public sealed partial class NavigationRootPage : Page
     {
         public Windows.System.VirtualKey ArrowKey;
-        public Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue;
-        private RootFrameNavigationHelper _navHelper;
-        private UISettings _settings;
 
+        private RootFrameNavigationHelper _navHelper;
+        private bool _isGamePadConnected;
+        private bool _isKeyboardConnected;
+        private Microsoft.UI.Xaml.Controls.NavigationViewItem _allControlsMenuItem;
+        private Microsoft.UI.Xaml.Controls.NavigationViewItem _newControlsMenuItem;
 
         public static NavigationRootPage GetForElement(object obj)
         {
@@ -57,14 +65,30 @@ namespace WinUIGallery
 
         public DeviceType DeviceFamily { get; set; }
 
+        public bool IsFocusSupported
+        {
+            get
+            {
+                return DeviceFamily == DeviceType.Xbox || _isGamePadConnected || _isKeyboardConnected;
+            }
+        }
+
+        public PageHeader PageHeader
+        {
+            get
+            {
+                return UIHelper.GetDescendantsOfType<PageHeader>(NavigationViewControl).FirstOrDefault();
+            }
+        }
+
         public string AppTitleText
         {
             get
             {
-#if DEBUG
-                return "WinUI 3 Gallery Dev";
-#else
+#if !UNIVERSAL
                 return "WinUI 3 Gallery";
+#else
+                return "WinUI 3 Gallery (UWP)";
 #endif
             }
         }
@@ -72,7 +96,10 @@ namespace WinUIGallery
         public NavigationRootPage()
         {
             this.InitializeComponent();
-            dispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+
+            // Workaround for VisualState issue that should be fixed
+            // by https://github.com/microsoft/microsoft-ui-xaml/pull/2271
+            NavigationViewControl.PaneDisplayMode = NavigationViewPaneDisplayMode.Left;
 
             _navHelper = new RootFrameNavigationHelper(rootFrame, NavigationViewControl);
 
@@ -88,65 +115,47 @@ namespace WinUIGallery
                 }
             };
 
+            Gamepad.GamepadAdded += OnGamepadAdded;
+            Gamepad.GamepadRemoved += OnGamepadRemoved;
+
+#if UNIVERSAL
+            CoreApplication.GetCurrentView().TitleBar.LayoutMetricsChanged += (s, e) => UpdateAppTitle(s);
+#endif
+
+            _isKeyboardConnected = Convert.ToBoolean(new KeyboardCapabilities().KeyboardPresent);
+
             // remove the solid-colored backgrounds behind the caption controls and system back button if we are in left mode
             // This is done when the app is loaded since before that the actual theme that is used is not "determined" yet
             Loaded += delegate (object sender, RoutedEventArgs e)
             {
-                NavigationOrientationHelper.UpdateNavigationViewForElement(NavigationOrientationHelper.IsLeftMode(), this);
-
-                Window window = WindowHelper.GetWindowForElement(sender as UIElement);
-                window.Title = AppTitleText;
-                window.ExtendsContentIntoTitleBar = true;
-                window.Activated += Window_Activated;
-                window.SetTitleBar(this.AppTitleBar);
-
-                AppWindow appWindow = WindowHelper.GetAppWindow(window);
-                appWindow.SetIcon("Assets/Tiles/GalleryIcon.ico");
-                _settings = new UISettings();
-                _settings.ColorValuesChanged += _settings_ColorValuesChanged; // cannot use FrameworkElement.ActualThemeChanged event because the triggerTitleBarRepaint workaround no longer works
+                NavigationOrientationHelper.UpdateTitleBarForElement(NavigationOrientationHelper.IsLeftMode(), this);
+#if !UNIVERSAL
+                WindowHelper.GetWindowForElement(this).Title = AppTitleText;
+#endif
             };
+
+            NavigationViewControl.RegisterPropertyChangedCallback(NavigationView.PaneDisplayModeProperty, new DependencyPropertyChangedCallback(OnPaneDisplayModeChanged));
+
+            // Set the titlebar to be custom. This is also referenced by the TitlebarPage
+            App.appTitlebar = AppTitleBar;
         }
 
-        private void Window_Activated(object sender, WindowActivatedEventArgs args)
+        private void OnPaneDisplayModeChanged(DependencyObject sender, DependencyProperty dp)
         {
-            if (args.WindowActivationState == WindowActivationState.Deactivated)
-            {
-                VisualStateManager.GoToState(this, "Deactivated", true);
-            }
-            else
-            {
-                VisualStateManager.GoToState(this, "Activated", true);
-            }
+            var navigationView = sender as NavigationView;
+            NavigationRootPage.GetForElement(this).AppTitleBar.Visibility = navigationView.PaneDisplayMode == NavigationViewPaneDisplayMode.Top ? Visibility.Collapsed : Visibility.Visible;
         }
 
-        private void OnPaneDisplayModeChanged(NavigationView sender, NavigationViewDisplayModeChangedEventArgs args)
+        void UpdateAppTitle(CoreApplicationViewTitleBar coreTitleBar)
         {
-            if (sender.PaneDisplayMode == NavigationViewPaneDisplayMode.Top)
-            {
-                VisualStateManager.GoToState(this, "Top", true);
-            }
-            else
-            {
-                if (args.DisplayMode == NavigationViewDisplayMode.Minimal)
-                {
-                    VisualStateManager.GoToState(this, "Compact", true);
-                }
-                else
-                {
-                    VisualStateManager.GoToState(this, "Default", true);
-                }
-            }
+            //ensure the custom title bar does not overlap window caption controls
+            Thickness currMargin = AppTitleBar.Margin;
+            AppTitleBar.Margin = new Thickness() { Left = currMargin.Left, Top = currMargin.Top, Right = coreTitleBar.SystemOverlayRightInset, Bottom = currMargin.Bottom };
         }
 
-        // this handles updating the caption button colors correctly when indows system theme is changed
-        // while the app is open
-        private void _settings_ColorValuesChanged(UISettings sender, object args)
+        public bool CheckNewControlSelected()
         {
-            // This calls comes off-thread, hence we will need to dispatch it to current app's thread
-            dispatcherQueue.TryEnqueue(() =>
-            {
-                _ = TitleBarHelper.ApplySystemThemeToCaptionButtons(App.StartupWindow);
-            });
+            return _newControlsMenuItem.IsSelected;
         }
 
         // Wraps a call to rootFrame.Navigate to give the Page a way to know which NavigationRootPage is navigating.
@@ -161,6 +170,24 @@ namespace WinUIGallery
             args.Parameter = targetPageArguments;
             rootFrame.Navigate(pageType, args, navigationTransitionInfo);
         }
+
+#if WINUI_PRERELEASE
+        public void App_Resuming()
+        {
+#if UNIVERSAL
+            switch (rootFrame?.Content)
+            {
+                case ItemPage itemPage:
+                    itemPage.SetInitialVisuals();
+                    break;
+                case NewControlsPage newControlsPage:
+                case AllControlsPage allControlsPage:
+                    NavigationView.AlwaysShowHeader = false;
+                    break;
+            }
+#endif
+        }
+#endif
 
         public void EnsureNavigationSelection(string id)
         {
@@ -179,23 +206,6 @@ namespace WinUIGallery
                                 item.IsSelected = true;
                                 return;
                             }
-                            else if (item.MenuItems.Count > 0)
-                            {
-                                foreach (var rawInnerItem in item.MenuItems)
-                                {
-                                    if (rawInnerItem is NavigationViewItem innerItem)
-                                    {
-                                        if ((string)innerItem.Tag == id)
-                                        {
-                                            group.IsExpanded = true;
-                                            item.IsExpanded = true;
-                                            NavigationView.SelectedItem = innerItem;
-                                            innerItem.IsSelected = true;
-                                            return;
-                                        }
-                                    }
-                                }
-                            }
                         }
                     }
                 }
@@ -204,34 +214,50 @@ namespace WinUIGallery
 
         private void AddNavigationMenuItems()
         {
-            foreach (var group in ControlInfoDataSource.Instance.Groups.OrderBy(i => i.Title).Where(i => !i.IsSpecialSection))
+            foreach (var group in ControlInfoDataSource.Instance.Groups.OrderBy(i => i.Title))
             {
-                var itemGroup = new NavigationViewItem() { Content = group.Title, Tag = group.UniqueId, DataContext = group, Icon = GetIcon(group.IconGlyph) };
+                var itemGroup = new Microsoft.UI.Xaml.Controls.NavigationViewItem() { Content = group.Title, Tag = group.UniqueId, DataContext = group, Icon = GetIcon(group.ImageIconPath) };
 
-                var groupMenuFlyoutItem = new MenuFlyoutItem() { Text = $"Copy Link to {group.Title} samples", Icon = new FontIcon() { Glyph = "\uE8C8" }, Tag = group };
+                var groupMenuFlyoutItem = new MenuFlyoutItem() { Text = $"Copy Link to {group.Title} Samples", Icon = new FontIcon() { Glyph = "\uE8C8" }, Tag = group };
                 groupMenuFlyoutItem.Click += this.OnMenuFlyoutItemClick;
                 itemGroup.ContextFlyout = new MenuFlyout() { Items = { groupMenuFlyoutItem } };
 
                 AutomationProperties.SetName(itemGroup, group.Title);
-                AutomationProperties.SetAutomationId(itemGroup, group.UniqueId);
 
                 foreach (var item in group.Items)
                 {
-                    var itemInGroup = new NavigationViewItem() { IsEnabled = item.IncludedInBuild, Content = item.Title, Tag = item.UniqueId, DataContext = item };
+                    var itemInGroup = new Microsoft.UI.Xaml.Controls.NavigationViewItem() { IsEnabled = item.IncludedInBuild, Content = item.Title, Tag = item.UniqueId, DataContext = item, Icon = GetIcon(item.ImageIconPath) };
 
-                    var itemInGroupMenuFlyoutItem = new MenuFlyoutItem() { Text = $"Copy Link to {item.Title} sample", Icon = new FontIcon() { Glyph = "\uE8C8" }, Tag = item };
+                    var itemInGroupMenuFlyoutItem = new MenuFlyoutItem() { Text = $"Copy Link to {item.Title} Sample", Icon = new FontIcon() { Glyph = "\uE8C8" }, Tag = item };
                     itemInGroupMenuFlyoutItem.Click += this.OnMenuFlyoutItemClick;
                     itemInGroup.ContextFlyout = new MenuFlyout() { Items = { itemInGroupMenuFlyoutItem } };
 
                     itemGroup.MenuItems.Add(itemInGroup);
                     AutomationProperties.SetName(itemInGroup, item.Title);
-                    AutomationProperties.SetAutomationId(itemInGroup, item.UniqueId);
                 }
 
                 NavigationViewControl.MenuItems.Add(itemGroup);
+
+                if (group.UniqueId == "AllControls")
+                {
+                    this._allControlsMenuItem = itemGroup;
+                }
+                else if (group.UniqueId == "NewControls")
+                {
+                    this._newControlsMenuItem = itemGroup;
+                }
             }
 
-            Home.Loaded += OnHomeMenuItemLoaded;
+            // Move "What's New" and "All Controls" to the top of the NavigationView
+            NavigationViewControl.MenuItems.Remove(_allControlsMenuItem);
+            NavigationViewControl.MenuItems.Remove(_newControlsMenuItem);
+            NavigationViewControl.MenuItems.Insert(0, _allControlsMenuItem);
+            NavigationViewControl.MenuItems.Insert(0, _newControlsMenuItem);
+
+            // Separate the All/New items from the rest of the categories.
+            NavigationViewControl.MenuItems.Insert(2, new Microsoft.UI.Xaml.Controls.NavigationViewItemSeparator());
+
+            _newControlsMenuItem.Loaded += OnNewControlsMenuItemLoaded;
         }
 
         private void OnMenuFlyoutItemClick(object sender, RoutedEventArgs e)
@@ -250,9 +276,10 @@ namespace WinUIGallery
         private static IconElement GetIcon(string imagePath)
         {
             return imagePath.ToLowerInvariant().EndsWith(".png") ?
-                        (IconElement)new BitmapIcon() { UriSource = new Uri(imagePath, UriKind.RelativeOrAbsolute), ShowAsMonochrome = false } :
+                        (IconElement)new BitmapIcon() { UriSource = new Uri(imagePath, UriKind.RelativeOrAbsolute) , ShowAsMonochrome = false} :
                         (IconElement)new FontIcon()
                         {
+                           // FontFamily = new FontFamily("Segoe MDL2 Assets"),
                             Glyph = imagePath
                         };
         }
@@ -269,33 +296,35 @@ namespace WinUIGallery
             DeviceFamily = parsedDeviceType;
         }
 
-        private void OnHomeMenuItemLoaded(object sender, RoutedEventArgs e)
+        private void OnNewControlsMenuItemLoaded(object sender, RoutedEventArgs e)
         {
-            if ( NavigationViewControl.DisplayMode == NavigationViewDisplayMode.Expanded)
+            if (IsFocusSupported && NavigationViewControl.DisplayMode == Microsoft.UI.Xaml.Controls.NavigationViewDisplayMode.Expanded)
             {
                 controlsSearchBox.Focus(FocusState.Keyboard);
             }
+        }
+
+        private void OnGamepadRemoved(object sender, Gamepad e)
+        {
+            _isGamePadConnected = Gamepad.Gamepads.Any();
+        }
+
+        private void OnGamepadAdded(object sender, Gamepad e)
+        {
+            _isGamePadConnected = Gamepad.Gamepads.Any();
         }
 
         private void OnNavigationViewControlLoaded(object sender, RoutedEventArgs e)
         {
             // Delay necessary to ensure NavigationView visual state can match navigation
             Task.Delay(500).ContinueWith(_ => this.NavigationViewLoaded?.Invoke(), TaskScheduler.FromCurrentSynchronizationContext());
-
-            var navigationView = sender as NavigationView;
-            navigationView.RegisterPropertyChangedCallback(NavigationView.IsPaneOpenProperty, OnIsPaneOpenChanged);
         }
 
-        private void OnIsPaneOpenChanged(DependencyObject sender, DependencyProperty dp)
+        private void OnNavigationViewSelectionChanged(Microsoft.UI.Xaml.Controls.NavigationView sender, Microsoft.UI.Xaml.Controls.NavigationViewSelectionChangedEventArgs args)
         {
-            var navigationView = sender as NavigationView;
-            var announcementText = navigationView.IsPaneOpen ? "Navigation Pane Opened" : "Navigation Pane Closed";
+            // Close any open teaching tips before navigation
+            CloseTeachingTips();
 
-            UIHelper.AnnounceActionForAccessibility(navigationView, announcementText, "NavigationViewPaneIsOpenChangeNotificationId");
-        }
-
-        private void OnNavigationViewSelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
-        {
             if (args.IsSettingsSelected)
             {
                 if (rootFrame.CurrentSourcePageType != typeof(SettingsPage))
@@ -306,55 +335,20 @@ namespace WinUIGallery
             else
             {
                 var selectedItem = args.SelectedItemContainer;
-                if (selectedItem == AllControlsItem)
+
+                if (selectedItem == _allControlsMenuItem)
                 {
                     if (rootFrame.CurrentSourcePageType != typeof(AllControlsPage))
                     {
                         Navigate(typeof(AllControlsPage));
                     }
                 }
-                else if (selectedItem == Home)
+                else if (selectedItem == _newControlsMenuItem)
                 {
-                    if (rootFrame.CurrentSourcePageType != typeof(HomePage))
+                    if (rootFrame.CurrentSourcePageType != typeof(NewControlsPage))
                     {
-                        Navigate(typeof(HomePage));
+                        Navigate(typeof(NewControlsPage));
                     }
-                }
-                else if (selectedItem == DesignGuidanceItem || selectedItem == AccessibilityItem)
-                {
-                    //Navigate(typeof(SectionPage), "Design_Guidance");
-                }
-                else if (selectedItem == ColorItem)
-                {
-                    Navigate(typeof(ItemPage), "Color");
-                }
-                else if (selectedItem == GeometryItem)
-                {
-                    Navigate(typeof(ItemPage), "Geometry");
-                }
-                else if (selectedItem == IconographyItem)
-                {
-                    Navigate(typeof(ItemPage), "Iconography");
-                }
-                else if (selectedItem == SpacingItem)
-                {
-                    Navigate(typeof(ItemPage), "Spacing");
-                }
-                else if (selectedItem == TypographyItem)
-                {
-                    Navigate(typeof(ItemPage), "Typography");
-                }
-                else if (selectedItem == AccessibilityScreenReaderPage)
-                {
-                    Navigate(typeof(ItemPage), "AccessibilityScreenReader");
-                }
-                else if (selectedItem == AccessibilityKeyboardPage)
-                {
-                    Navigate(typeof(ItemPage), "AccessibilityKeyboard");
-                }
-                else if (selectedItem == AccessibilityContrastPage)
-                {
-                    Navigate(typeof(ItemPage), "AccessibilityColorContrast");
                 }
                 else
                 {
@@ -368,18 +362,41 @@ namespace WinUIGallery
                         var item = (ControlInfoDataItem)selectedItem.DataContext;
                         Navigate(typeof(ItemPage), item.UniqueId);
                     }
+
                 }
             }
         }
 
         private void OnRootFrameNavigated(object sender, NavigationEventArgs e)
         {
+            // Close any open teaching tips before navigation
+            CloseTeachingTips();
+
+            if (e.SourcePageType == typeof(AllControlsPage) ||
+                e.SourcePageType == typeof(NewControlsPage))
+            {
+                NavigationViewControl.AlwaysShowHeader = false;
+            }
+            else
+            {
+                NavigationViewControl.AlwaysShowHeader = true;
+            }
+
             TestContentLoadedCheckBox.IsChecked = true;
         }
 
         private void OnRootFrameNavigating(object sender, NavigatingCancelEventArgs e)
         {
             TestContentLoadedCheckBox.IsChecked = false;
+        }
+
+        private void CloseTeachingTips()
+        {
+            if (PageHeader != null)
+            {
+                PageHeader.TeachingTip1.IsOpen = false;
+                PageHeader.TeachingTip3.IsOpen = false;
+            }
         }
 
         private void OnControlsSearchBoxTextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
@@ -430,14 +447,9 @@ namespace WinUIGallery
             if (args.ChosenSuggestion != null && args.ChosenSuggestion is ControlInfoDataItem)
             {
                 var infoDataItem = args.ChosenSuggestion as ControlInfoDataItem;
-                var hasChangedSelection = EnsureItemIsVisibleInNavigation(infoDataItem.Title);
-
-                // In case the menu selection has changed, it means that it has triggered
-                // the selection changed event, that will navigate to the page already
-                if (!hasChangedSelection)
-                {
-                    Navigate(typeof(ItemPage), infoDataItem.UniqueId);
-                }
+                var itemId = infoDataItem.UniqueId;
+                EnsureItemIsVisibleInNavigation(infoDataItem.Title);
+                Navigate(typeof(ItemPage), itemId);
             }
             else if (!string.IsNullOrEmpty(args.QueryText))
             {
@@ -445,7 +457,7 @@ namespace WinUIGallery
             }
         }
 
-        public bool EnsureItemIsVisibleInNavigation(string name)
+        public void EnsureItemIsVisibleInNavigation(string name)
         {
             bool changedSelection = false;
             foreach (object rawItem in NavigationView.MenuItems)
@@ -509,8 +521,84 @@ namespace WinUIGallery
                     break;
                 }
             }
-            return changedSelection;
         }
+
+        private void NavigationViewControl_PaneClosing(Microsoft.UI.Xaml.Controls.NavigationView sender, Microsoft.UI.Xaml.Controls.NavigationViewPaneClosingEventArgs args)
+        {
+            UpdateAppTitleMargin(sender);
+        }
+
+        private void NavigationViewControl_PaneOpening(Microsoft.UI.Xaml.Controls.NavigationView sender, object args)
+        {
+            UpdateAppTitleMargin(sender);
+        }
+
+        private void NavigationViewControl_DisplayModeChanged(Microsoft.UI.Xaml.Controls.NavigationView sender, Microsoft.UI.Xaml.Controls.NavigationViewDisplayModeChangedEventArgs args)
+        {
+            Thickness currMargin = AppTitleBar.Margin;
+            if (sender.DisplayMode == Microsoft.UI.Xaml.Controls.NavigationViewDisplayMode.Minimal)
+            {
+                AppTitleBar.Margin = new Thickness() { Left = (sender.CompactPaneLength * 2), Top = currMargin.Top, Right = currMargin.Right, Bottom = currMargin.Bottom };
+
+            }
+            else
+            {
+                AppTitleBar.Margin = new Thickness() { Left = sender.CompactPaneLength, Top = currMargin.Top, Right = currMargin.Right, Bottom = currMargin.Bottom };
+            }
+
+            UpdateAppTitleMargin(sender);
+            UpdateHeaderMargin(sender);
+        }
+
+        private void UpdateAppTitleMargin(Microsoft.UI.Xaml.Controls.NavigationView sender)
+        {
+            const int smallLeftIndent = 4, largeLeftIndent = 24;
+
+            if (ApiInformation.IsApiContractPresent("Windows.Foundation.UniversalApiContract", 7))
+            {
+                AppTitle.TranslationTransition = new Vector3Transition();
+
+                if ((sender.DisplayMode == Microsoft.UI.Xaml.Controls.NavigationViewDisplayMode.Expanded && sender.IsPaneOpen) ||
+                         sender.DisplayMode == Microsoft.UI.Xaml.Controls.NavigationViewDisplayMode.Minimal)
+                {
+                    AppTitle.Translation = new System.Numerics.Vector3(smallLeftIndent, 0, 0);
+                }
+                else
+                {
+                    AppTitle.Translation = new System.Numerics.Vector3(largeLeftIndent, 0, 0);
+                }
+            }
+            else
+            {
+                Thickness currMargin = AppTitle.Margin;
+
+                if ((sender.DisplayMode == Microsoft.UI.Xaml.Controls.NavigationViewDisplayMode.Expanded && sender.IsPaneOpen) ||
+                         sender.DisplayMode == Microsoft.UI.Xaml.Controls.NavigationViewDisplayMode.Minimal)
+                {
+                    AppTitle.Margin = new Thickness() { Left = smallLeftIndent, Top = currMargin.Top, Right = currMargin.Right, Bottom = currMargin.Bottom };
+                }
+                else
+                {
+                    AppTitle.Margin = new Thickness() { Left = largeLeftIndent, Top = currMargin.Top, Right = currMargin.Right, Bottom = currMargin.Bottom };
+                }
+            }
+        }
+
+        private void UpdateHeaderMargin(Microsoft.UI.Xaml.Controls.NavigationView sender)
+        {
+            if (PageHeader != null)
+            {
+                if (sender.DisplayMode == Microsoft.UI.Xaml.Controls.NavigationViewDisplayMode.Minimal)
+                {
+                    PageHeader.HeaderPadding = (Thickness)App.Current.Resources["PageHeaderMinimalPadding"];
+                }
+                else
+                {
+                    PageHeader.HeaderPadding = (Thickness)App.Current.Resources["PageHeaderDefaultPadding"];
+                }
+            }
+        }
+
         private void CtrlF_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
         {
             controlsSearchBox.Focus(FocusState.Programmatic);
@@ -556,7 +644,7 @@ namespace WinUIGallery
 
         private void GoBackInvokerButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
         {
-            if (this.rootFrame.CanGoBack)
+            if(this.rootFrame.CanGoBack)
             {
                 this.rootFrame.GoBack();
             }
@@ -578,11 +666,11 @@ namespace WinUIGallery
                 DebugBreak();
 
                 dispatcherQueue.TryEnqueue(
-                    Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
-                    new Microsoft.UI.Dispatching.DispatcherQueueHandler(() =>
-                    {
-                        DebuggerAttachedCheckBox.IsChecked = true;
-                    }));
+                    DispatcherQueuePriority.Low,
+                    new DispatcherQueueHandler(() =>
+                {
+                    DebuggerAttachedCheckBox.IsChecked = true;
+                }));
             });
 
             var asyncAction = Windows.System.Threading.ThreadPool.RunAsync(workItem);
@@ -595,7 +683,6 @@ namespace WinUIGallery
         private static extern void DebugBreak();
 
         #endregion
-
     }
 
     public class NavigationRootPageArgs

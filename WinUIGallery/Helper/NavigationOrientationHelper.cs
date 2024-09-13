@@ -1,61 +1,77 @@
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Windows.ApplicationModel.Core;
 using Windows.Storage;
+using Microsoft.UI;
+using Microsoft.UI.Xaml;
 
+#if UNIVERSAL
+using Windows.UI.ViewManagement;
+#endif
 
-namespace WinUIGallery.Helper
+namespace AppUIBasics.Helper
 {
     public static class NavigationOrientationHelper
     {
 
         private const string IsLeftModeKey = "NavigationIsOnLeftMode";
+
+#if UNPACKAGED
         private static bool _isLeftMode = true;
+#endif
 
         public static bool IsLeftMode()
         {
-            if (NativeHelper.IsAppPackaged)
+#if !UNPACKAGED
+            var valueFromSettings = ApplicationData.Current.LocalSettings.Values[IsLeftModeKey];
+            if(valueFromSettings == null)
             {
-                var valueFromSettings = ApplicationData.Current.LocalSettings.Values[IsLeftModeKey];
-                if (valueFromSettings == null)
-                {
-                    ApplicationData.Current.LocalSettings.Values[IsLeftModeKey] = true;
-                    valueFromSettings = true;
-                }
-                return (bool)valueFromSettings;
+                ApplicationData.Current.LocalSettings.Values[IsLeftModeKey] = true;
+                valueFromSettings = true;
             }
-            else
-            {
-                return _isLeftMode;
-            }
+            return (bool)valueFromSettings;
+#else
+            return _isLeftMode;
+#endif
         }
 
         public static void IsLeftModeForElement(bool isLeftMode, UIElement element)
         {
-            UpdateNavigationViewForElement(isLeftMode, element);
-            if (NativeHelper.IsAppPackaged)
-            {
-                ApplicationData.Current.LocalSettings.Values[IsLeftModeKey] = isLeftMode;
-            }
-            else
-            {
-                _isLeftMode = isLeftMode;
-            }
+            UpdateTitleBarForElement(isLeftMode, element);
+#if !UNPACKAGED
+            ApplicationData.Current.LocalSettings.Values[IsLeftModeKey] = isLeftMode;
+#else
+            _isLeftMode = isLeftMode;
+#endif
         }
 
-        public static void UpdateNavigationViewForElement(bool isLeftMode, UIElement element)
+        public static void UpdateTitleBarForElement(bool isLeftMode, UIElement element)
         {
-            NavigationView _navView = NavigationRootPage.GetForElement(element).NavigationView;
+#if UNIVERSAL
+            CoreApplication.GetCurrentView().TitleBar.ExtendViewIntoTitleBar = isLeftMode;
+
+            ApplicationViewTitleBar titleBar = ApplicationView.GetForCurrentView().TitleBar;
+#endif
             if (isLeftMode)
             {
-                _navView.PaneDisplayMode = NavigationViewPaneDisplayMode.Auto;
-                Grid.SetRow(_navView, 0);
+                NavigationRootPage.GetForElement(element).NavigationView.PaneDisplayMode = Microsoft.UI.Xaml.Controls.NavigationViewPaneDisplayMode.Auto;
+#if UNIVERSAL
+                titleBar.ButtonBackgroundColor = Colors.Transparent;
+                titleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
+#endif
             }
             else
             {
-                _navView.PaneDisplayMode = NavigationViewPaneDisplayMode.Top;
-                Grid.SetRow(_navView, 1);
+                NavigationRootPage.GetForElement(element).NavigationView.PaneDisplayMode = Microsoft.UI.Xaml.Controls.NavigationViewPaneDisplayMode.Top;
+#if UNIVERSAL
+                var userSettings = new UISettings();
+                titleBar.ButtonBackgroundColor = userSettings.GetColorValue(UIColorType.Accent);
+                titleBar.ButtonInactiveBackgroundColor = userSettings.GetColorValue(UIColorType.Accent);
+#endif
             }
         }
-        
     }
 }
